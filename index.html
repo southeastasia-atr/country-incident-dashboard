@@ -205,6 +205,7 @@
         var results = Papa.parse(text, {
           header: true,
           skipEmptyLines: true,
+          encoding: 'UTF-8',
         });
 
         console.log('Raw rows from CSV:', results.data.length);
@@ -447,7 +448,8 @@
     function buildWeaponsHtml(row) {
       var text = (row['Weapons'] || '').trim();
       if (!text) return '<span class="expand-none">No weapons recorded</span>';
-      return '<span class="expand-text">' + escHtml(text).replace(/\n/g, '<br>') + '</span>';
+      var lines = text.split(/;|\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+      return lines.map(function(l){ return '<div class="expand-text">' + escHtml(l) + '</div>'; }).join('');
     }
 
     function renderTable(rows) {
