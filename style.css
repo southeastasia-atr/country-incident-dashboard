@@ -385,3 +385,71 @@ html, body {
   text-transform: uppercase;
   color: #fff;
 }
+
+/* ── Filter bar ──────────────────────────────────────────────────────────── */
+.table-toolbar {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.filter-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.filter-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.filter-input:focus {
+  border-color: var(--accent);
+}
+
+.filter-date  { width: 128px; }
+.filter-select { width: 148px; cursor: pointer; }
+
+.filter-search-group { margin-left: auto; }
+.filter-search { width: 180px; }
+.filter-search::placeholder { color: var(--text-muted); }
+
+/* Style native date/select for dark theme */
+.filter-input option { background: var(--surface); color: var(--text); }
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
+.filter-reset {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  line-height: 1;
+}
+
+.filter-reset:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
