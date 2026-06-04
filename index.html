@@ -454,7 +454,7 @@
         var origIdx = incidents.indexOf(row);
         var color = typeColor(row['Incident Type']);
         var title = (row['Title'] || '--');
-        var titleShort = title.length > 55 ? title.substring(0, 55) + '...' : title;
+        var titleShort = title.length > 90 ? title.substring(0, 90) + '...' : title;
         var loc = (row['Location'] || '--');
         var locShort = loc.length > 40 ? loc.substring(0, 40) + '...' : loc;
         return '<tr data-id="' + origIdx + '" class="' + (origIdx === activeRowId ? 'active' : '') + '">' +

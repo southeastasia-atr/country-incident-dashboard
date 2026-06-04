@@ -362,9 +362,20 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
   color: var(--text);
 }
+
+/* Per-column widths — date, type, location, score fixed; title expands */
+#incidentTable th:nth-child(1),
+#incidentTable td:nth-child(1) { width: 82px;  min-width: 82px; }
+#incidentTable th:nth-child(2),
+#incidentTable td:nth-child(2) { width: 148px; min-width: 148px; }
+#incidentTable th:nth-child(3),
+#incidentTable td:nth-child(3) { width: auto;  max-width: 0; }
+#incidentTable th:nth-child(4),
+#incidentTable td:nth-child(4) { width: 180px; min-width: 180px; }
+#incidentTable th:nth-child(5),
+#incidentTable td:nth-child(5) { width: 58px;  min-width: 58px; text-align: right; }
 
 .placeholder-row td {
   color: var(--text-muted);
