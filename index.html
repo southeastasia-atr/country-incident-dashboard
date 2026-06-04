@@ -440,6 +440,23 @@
     }
 
     // STEP 7: RENDER TABLE
+    function escHtml(s) {
+      return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function buildWeaponsHtml(row) {
+      var weaponCols = ['Pistol','Revolver','Assault Rifle','Rifle','Shotgun','SMG','LMG','HMG',
+        'GL','AGL','RPG/ATW','Mortar','ATGM','MANPADS','Hand Grenade','Projected Gren',
+        'Rifle Gren','Munition','Ammo','Craft handgun','Craft Rifle','Craft Shotgun',
+        'Craft SMG','Craft RPG'];
+      var found = [];
+      weaponCols.forEach(function(col) {
+        var v = (row[col] || '').trim();
+        if (v && v !== '0' && v !== '') found.push('<span class="weapon-tag">' + escHtml(col) + (isNaN(v) ? '' : ' ×' + v) + '</span>');
+      });
+      return found.length ? found.join('') : '<span class="expand-none">No weapons recorded</span>';
+    }
+
     function renderTable(rows) {
       var tbody = document.getElementById('tableBody');
       document.getElementById('tableCount').textContent =
@@ -457,35 +474,57 @@
         var titleShort = title.length > 90 ? title.substring(0, 90) + '...' : title;
         var loc = (row['Location'] || '--');
         var locShort = loc.length > 40 ? loc.substring(0, 40) + '...' : loc;
-        return '<tr data-id="' + origIdx + '" class="' + (origIdx === activeRowId ? 'active' : '') + '">' +
+        var desc = escHtml(row['Description'] || '');
+        var weapons = buildWeaponsHtml(row);
+        var isActive = origIdx === activeRowId;
+
+        return '<tr data-id="' + origIdx + '" class="main-row' + (isActive ? ' active' : '') + '">' +
           '<td>' + (row['Date'] || '--') + '</td>' +
-          '<td><span class="type-badge" style="background:' + color + '">' + (row['Incident Type'] || '--') + '</span></td>' +
-          '<td title="' + title + '">' + titleShort + '</td>' +
-          '<td title="' + loc + '">' + locShort + '</td>' +
-          '<td>' + (row['Score'] || '--') + '</td>' +
+          '<td><span class="type-badge" style="background:' + color + '">' + escHtml(row['Incident Type'] || '--') + '</span></td>' +
+          '<td title="' + escHtml(title) + '">' + escHtml(titleShort) + '</td>' +
+          '<td title="' + escHtml(loc) + '">' + escHtml(locShort) + '</td>' +
+          '<td>' + escHtml(row['Score'] || '--') + '</td>' +
+          '</tr>' +
+          '<tr class="expand-row" data-expand-id="' + origIdx + '">' +
+          '<td colspan="5">' +
+          '<div class="expand-body">' +
+          (desc ? '<div class="expand-section"><div class="expand-label">Description</div><div class="expand-text">' + desc + '</div></div>' : '') +
+          '<div class="expand-section"><div class="expand-label">Weapons</div><div class="expand-weapons">' + weapons + '</div></div>' +
+          '</div>' +
+          '</td>' +
           '</tr>';
       }).join('');
 
-      tbody.querySelectorAll('tr[data-id]').forEach(function(tr) {
+      tbody.querySelectorAll('tr.main-row').forEach(function(tr) {
         tr.addEventListener('click', function() {
           var id = parseInt(tr.dataset.id);
           var row = incidents[id];
           var lng = parseFloat(row['Longitude']);
           var lat = parseFloat(row['Latitude']);
 
+          // Toggle expand row
+          var expandRow = tbody.querySelector('tr.expand-row[data-expand-id="' + id + '"]');
+          var isOpen = expandRow.classList.contains('open');
+
+          // Close all other expand rows
+          tbody.querySelectorAll('tr.expand-row.open').forEach(function(er) { er.classList.remove('open'); });
+
+          if (!isOpen) expandRow.classList.add('open');
+
+          // Fly and popup
           map.flyTo({ center: [lng, lat], zoom: 10, speed: 1.2 });
 
           if (activePopup) activePopup.remove();
           activePopup = new maplibregl.Popup({ maxWidth: '280px', offset: 12 })
             .setLngLat([lng, lat])
             .setHTML(
-              '<strong>' + (row['Incident Type'] || '') + '</strong>' +
-              '<div class="popup-title">' + (row['Title'] || '') + '</div>' +
+              '<strong>' + escHtml(row['Incident Type'] || '') + '</strong>' +
+              '<div class="popup-title">' + escHtml(row['Title'] || '') + '</div>' +
               '<div class="popup-meta">' +
-              '<span>Date: ' + (row['Date'] || '') + '</span>' +
-              '<span>Location: ' + (row['Location'] || '') + '</span>' +
-              (row['Score'] ? '<span>Score: ' + row['Score'] + '</span>' : '') +
-              (row['Convergence'] ? '<span>Convergence: ' + row['Convergence'] + '</span>' : '') +
+              '<span>Date: ' + escHtml(row['Date'] || '') + '</span>' +
+              '<span>Location: ' + escHtml(row['Location'] || '') + '</span>' +
+              (row['Score'] ? '<span>Score: ' + escHtml(row['Score']) + '</span>' : '') +
+              (row['Convergence'] ? '<span>Convergence: ' + escHtml(row['Convergence']) + '</span>' : '') +
               '</div>'
             )
             .addTo(map);
@@ -498,10 +537,10 @@
     // STEP 8: HIGHLIGHT ROW + MARKER
     function highlightRow(id) {
       activeRowId = id;
-      document.querySelectorAll('#tableBody tr').forEach(function(tr) {
+      document.querySelectorAll('#tableBody tr.main-row').forEach(function(tr) {
         tr.classList.toggle('active', parseInt(tr.dataset.id) === id);
       });
-      var activeEl = document.querySelector('#tableBody tr[data-id="' + id + '"]');
+      var activeEl = document.querySelector('#tableBody tr.main-row[data-id="' + id + '"]');
       if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 

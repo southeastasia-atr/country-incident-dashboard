@@ -469,3 +469,68 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.4;
   cursor: not-allowed !important;
 }
+
+/* ── Expandable rows ─────────────────────────────────────────────────────── */
+.expand-row { display: none; }
+.expand-row.open { display: table-row; }
+
+.expand-row td {
+  padding: 0 !important;
+  border-bottom: 2px solid var(--accent) !important;
+}
+
+.expand-body {
+  padding: 12px 16px 14px 16px;
+  background: var(--surface-2);
+  display: flex;
+  gap: 24px;
+}
+
+.expand-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.expand-section:first-child {
+  flex: 2;
+}
+
+.expand-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.expand-text {
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.55;
+  white-space: normal;
+}
+
+.expand-weapons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.weapon-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: .04em;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.expand-none {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
