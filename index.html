@@ -445,16 +445,9 @@
     }
 
     function buildWeaponsHtml(row) {
-      var weaponCols = ['Pistol','Revolver','Assault Rifle','Rifle','Shotgun','SMG','LMG','HMG',
-        'GL','AGL','RPG/ATW','Mortar','ATGM','MANPADS','Hand Grenade','Projected Gren',
-        'Rifle Gren','Munition','Ammo','Craft handgun','Craft Rifle','Craft Shotgun',
-        'Craft SMG','Craft RPG'];
-      var found = [];
-      weaponCols.forEach(function(col) {
-        var v = (row[col] || '').trim();
-        if (v && v !== '0' && v !== '') found.push('<span class="weapon-tag">' + escHtml(col) + (isNaN(v) ? '' : ' ×' + v) + '</span>');
-      });
-      return found.length ? found.join('') : '<span class="expand-none">No weapons recorded</span>';
+      var text = (row['Weapons'] || '').trim();
+      if (!text) return '<span class="expand-none">No weapons recorded</span>';
+      return '<span class="expand-text">' + escHtml(text).replace(/\n/g, '<br>') + '</span>';
     }
 
     function renderTable(rows) {
