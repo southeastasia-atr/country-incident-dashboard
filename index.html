@@ -350,6 +350,8 @@
 
       // Populate tag dropdown — split on newline, normalise case, exclude incident types
       var incidentTypes = new Set(incidents.map(function(r){ return (r['Incident Type']||'').trim().toLowerCase(); }));
+      // Also exclude partial-match type-adjacent tags
+      ['illicit possession','illicit transfer','illicit manufacture'].forEach(function(t){ incidentTypes.add(t); });
       var tagSet = {};
       incidents.forEach(function(r){
         var raw = r['Tags'] || '';
