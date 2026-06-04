@@ -453,3 +453,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.filter-disabled {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+}

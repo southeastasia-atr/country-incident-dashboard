@@ -109,6 +109,13 @@
           </select>
         </div>
 
+        <div class="filter-group">
+          <label class="filter-label">Convergence</label>
+          <select class="filter-input filter-select filter-disabled" disabled title="Coming soon">
+            <option>All convergence</option>
+          </select>
+        </div>
+
         <div class="filter-group filter-search-group">
           <input type="text" id="filterSearch" class="filter-input filter-search" placeholder="Search…" />
         </div>
@@ -341,13 +348,14 @@
         var o = document.createElement('option'); o.value = t; o.textContent = t; typeEl.appendChild(o);
       });
 
-      // Populate tag dropdown — split on newline, normalise case
+      // Populate tag dropdown — split on newline, normalise case, exclude incident types
+      var incidentTypes = new Set(incidents.map(function(r){ return (r['Incident Type']||'').trim().toLowerCase(); }));
       var tagSet = {};
       incidents.forEach(function(r){
         var raw = r['Tags'] || '';
         raw.split(/[\n,]/).forEach(function(t){
           var n = normaliseTag(t);
-          if (n) tagSet[n] = true;
+          if (n && !incidentTypes.has(n.toLowerCase())) tagSet[n] = true;
         });
       });
       var tags = Object.keys(tagSet).sort();
