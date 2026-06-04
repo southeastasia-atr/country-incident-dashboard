@@ -517,18 +517,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   gap: 5px;
 }
 
-.weapon-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 2px;
-  font-family: var(--font-ui);
-  font-size: 10px;
-  letter-spacing: .04em;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-
 .expand-none {
   font-size: 12px;
   color: var(--text-muted);
