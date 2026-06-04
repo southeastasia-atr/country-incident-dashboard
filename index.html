@@ -74,6 +74,8 @@
           <input type="radio" name="layer" value="heatmap" /> Heatmap
         </label>
       </div>
+      <div class="map-legend" id="mapLegend"></div>
+
     </section>
 
     <!-- Resizable divider -->
@@ -292,6 +294,26 @@
       });
 
       console.log('Incident layer added');
+      buildLegend();
+    }
+
+    // LEGEND
+    function buildLegend() {
+      var usedTypes = {};
+      incidents.forEach(function(row) {
+        var t = row['Incident Type'] || 'Unknown';
+        if (!usedTypes[t]) usedTypes[t] = typeColor(t);
+      });
+
+      var html = '<div class="legend-title">Incident Type</div>';
+      Object.entries(usedTypes).sort(function(a,b){ return a[0].localeCompare(b[0]); }).forEach(function(entry) {
+        html += '<div class="legend-row">' +
+          '<span class="legend-swatch" style="background:' + entry[1] + '"></span>' +
+          '<span class="legend-label">' + entry[0] + '</span>' +
+          '</div>';
+      });
+
+      document.getElementById('mapLegend').innerHTML = html;
     }
 
     // STEP 7: RENDER TABLE
