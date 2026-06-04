@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Incident Map - Philippines</title>
+
+  <!-- MapLibre GL JS -->
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <!-- PapaParse (CSV parsing) -->
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-inner">
+      <span class="header-logo">
+        <svg width="32" height="32" viewBox="140 150 420 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <style>.e{stroke:#3a5f82;stroke-width:6;fill:none;stroke-linecap:round}.nb{fill:#4d90c4}.no{fill:#e8962a}</style>
+          <line class="e" x1="190" y1="220" x2="310" y2="295"/>
+          <line class="e" x1="190" y1="220" x2="295" y2="185"/>
+          <line class="e" x1="190" y1="220" x2="265" y2="340"/>
+          <line class="e" x1="295" y1="185" x2="420" y2="220"/>
+          <line class="e" x1="265" y1="340" x2="310" y2="295"/>
+          <line class="e" x1="265" y1="340" x2="355" y2="430"/>
+          <line class="e" x1="355" y1="355" x2="310" y2="295"/>
+          <line class="e" x1="355" y1="355" x2="420" y2="220"/>
+          <line class="e" x1="355" y1="355" x2="460" y2="320"/>
+          <line class="e" x1="355" y1="355" x2="355" y2="430"/>
+          <line class="e" x1="355" y1="355" x2="480" y2="390"/>
+          <line class="e" x1="420" y1="220" x2="460" y2="320"/>
+          <line class="e" x1="420" y1="220" x2="505" y2="270"/>
+          <line class="e" x1="505" y1="270" x2="460" y2="320"/>
+          <line class="e" x1="505" y1="270" x2="480" y2="390"/>
+          <line class="e" x1="480" y1="390" x2="460" y2="320"/>
+          <line class="e" x1="480" y1="390" x2="530" y2="440"/>
+          <line class="e" x1="355" y1="430" x2="530" y2="440"/>
+          <circle class="nb" cx="295" cy="185" r="24"/>
+          <circle class="nb" cx="310" cy="295" r="26"/>
+          <circle class="nb" cx="265" cy="340" r="22"/>
+          <circle class="nb" cx="420" cy="220" r="26"/>
+          <circle class="nb" cx="460" cy="320" r="22"/>
+          <circle class="nb" cx="505" cy="270" r="20"/>
+          <circle class="nb" cx="355" cy="430" r="24"/>
+          <circle class="nb" cx="530" cy="440" r="22"/>
+          <circle class="no" cx="190" cy="220" r="40"/>
+          <circle class="no" cx="355" cy="355" r="46"/>
+          <circle class="no" cx="480" cy="390" r="34"/>
+        </svg>
+      </span>
+      <h1>Incident Map</h1>
+      <span class="header-sub">Philippines</span>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- Map panel -->
+    <section class="map-panel">
+      <div id="map"></div>
+
+      <div class="layer-switcher" id="layerSwitcher">
+        <label class="layer-btn active" data-layer="incidents">
+          <input type="radio" name="layer" value="incidents" checked /> Incidents
+        </label>
+        <label class="layer-btn" data-layer="scoring">
+          <input type="radio" name="layer" value="scoring" /> Scoring
+        </label>
+        <label class="layer-btn" data-layer="heatmap">
+          <input type="radio" name="layer" value="heatmap" /> Heatmap
+        </label>
+      </div>
+    </section>
+
+    <!-- Resizable divider -->
+    <div class="divider" id="divider"></div>
+
+    <!-- Table panel -->
+    <section class="table-panel">
+      <div class="table-toolbar">
+        <span class="table-count" id="tableCount">-- incidents</span>
+      </div>
+      <div class="table-scroll">
+        <table id="incidentTable">
+          <thead>
+            <tr>
+              <th data-col="Date">Date <span class="sort-icon">&#8597;</span></th>
+              <th data-col="Incident Type">Type <span class="sort-icon">&#8597;</span></th>
+              <th data-col="Title">Title <span class="sort-icon">&#8597;</span></th>
+              <th data-col="Location">Location <span class="sort-icon">&#8597;</span></th>
+              <th data-col="Score">Score <span class="sort-icon">&#8597;</span></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr class="placeholder-row">
+              <td colspan="5">Loading incidents...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // COLOR MAP BY INCIDENT TYPE
+    const TYPE_COLORS = {
+      'Seizure':            '#00b050',  // green
+      'Diversion':          '#e53935',  // red
+      'Illicit transfer':   '#cc00cc',  // magenta
+      'Illicit use':        '#c8a800',  // golden yellow (legible on dark)
+      'Illicit possession': '#c8a800',  // golden yellow
+      'Illicit manufacture':'#ff9900',  // orange
+      'Destruction':        '#4a4a4a',  // dark charcoal
+      'UXO':                '#888888',  // mid-grey
+      'Surrender':          '#4472c4',  // blue
+      'Surrender/amnesty':  '#4472c4',  // blue
+      'Armed clash':        '#e53935',  // red
+      'IED':                '#ff9900',  // orange
+      'Assassination':      '#9b59b6',  // purple
+      'Kidnapping':         '#e91e63',  // pink
+    };
+    const DEFAULT_COLOR = '#8b949e';
+
+    function typeColor(type) {
+      if (!type) return DEFAULT_COLOR;
+      for (const [key, val] of Object.entries(TYPE_COLORS)) {
+        if (type.toLowerCase().includes(key.toLowerCase())) return val;
+      }
+      return DEFAULT_COLOR;
+    }
+
+    // MAP INITIALISATION
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+      center: [122.0, 12.5],
+      zoom: 5.5,
+      minZoom: 4,
+      maxZoom: 18,
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+
+    // GLOBAL STATE
+    let incidents = [];
+    let sortCol = 'Date';
+    let sortAsc = true;
+    let activeRowId = null;
+    let activePopup = null;
+
+    // STEP 5: LOAD & PARSE CSV
+    fetch('PHLdata.csv')
+      .then(function(response) {
+        console.log('Fetch status:', response.status, response.statusText);
+        return response.text();
+      })
+      .then(function(text) {
+        console.log('Raw text length:', text.length);
+        console.log('First 200 chars:', JSON.stringify(text.substring(0, 200)));
+
+        var results = Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+        });
+
+        console.log('Raw rows from CSV:', results.data.length);
+        console.log('First row keys:', Object.keys(results.data[0] || {}));
+        console.log('First row sample:', results.data[0]);
+
+        incidents = results.data.filter(function(row) {
+          return row['Latitude'] && row['Longitude'] &&
+            !isNaN(parseFloat(row['Latitude'])) &&
+            !isNaN(parseFloat(row['Longitude']));
+        });
+        console.log('Loaded incidents:', incidents.length);
+
+        if (map.loaded()) {
+          addIncidentLayer();
+        } else {
+          map.on('load', addIncidentLayer);
+        }
+
+        renderTable(incidents);
+      })
+      .catch(function(err) {
+        console.error('Fetch error:', err);
+        document.getElementById('tableBody').innerHTML =
+          '<tr class="placeholder-row"><td colspan="5">Error loading PHLdata.csv</td></tr>';
+      });
+
+    // CSV TO GEOJSON
+    function toGeoJSON(rows) {
+      return {
+        type: 'FeatureCollection',
+        features: rows.map(function(row, i) {
+          return {
+            type: 'Feature',
+            id: i,
+            geometry: {
+              type: 'Point',
+              coordinates: [parseFloat(row['Longitude']), parseFloat(row['Latitude'])]
+            },
+            properties: {
+              id:            i,
+              date:          row['Date']          || '',
+              incident_type: row['Incident Type'] || '',
+              title:         row['Title']         || '',
+              location:      row['Location']      || '',
+              score:         row['Score']         || '',
+              convergence:   row['Convergence']   || '',
+              tags:          row['Tags']          || '',
+              source:        row['Source']        || '',
+              color:         typeColor(row['Incident Type']),
+            }
+          };
+        })
+      };
+    }
+
+    // STEP 6: ADD POINT LAYER
+    function addIncidentLayer() {
+      var geojson = toGeoJSON(incidents);
+
+      map.addSource('incidents', {
+        type: 'geojson',
+        data: geojson,
+      });
+
+      map.addLayer({
+        id: 'incidents-halo',
+        type: 'circle',
+        source: 'incidents',
+        paint: {
+          'circle-radius': 14,
+          'circle-color': ['get', 'color'],
+          'circle-opacity': 0,
+          'circle-blur': 0.6,
+        }
+      });
+
+      map.addLayer({
+        id: 'incidents-circles',
+        type: 'circle',
+        source: 'incidents',
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            5, 5,
+            10, 9
+          ],
+          'circle-color': ['get', 'color'],
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#fff',
+          'circle-opacity': 0.88,
+        }
+      });
+
+      map.on('click', 'incidents-circles', function(e) {
+        var props = e.features[0].properties;
+        var rowId = props.id;
+
+        if (activePopup) activePopup.remove();
+
+        activePopup = new maplibregl.Popup({ maxWidth: '280px', offset: 12 })
+          .setLngLat(e.features[0].geometry.coordinates)
+          .setHTML(
+            '<strong>' + props.incident_type + '</strong>' +
+            '<div class="popup-title">' + props.title + '</div>' +
+            '<div class="popup-meta">' +
+            '<span>Date: ' + props.date + '</span>' +
+            '<span>Location: ' + props.location + '</span>' +
+            (props.score ? '<span>Score: ' + props.score + '</span>' : '') +
+            (props.convergence ? '<span>Convergence: ' + props.convergence + '</span>' : '') +
+            '</div>'
+          )
+          .addTo(map);
+
+        highlightRow(rowId);
+      });
+
+      map.on('mouseenter', 'incidents-circles', function() {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', 'incidents-circles', function() {
+        map.getCanvas().style.cursor = '';
+      });
+
+      console.log('Incident layer added');
+    }
+
+    // STEP 7: RENDER TABLE
+    function renderTable(rows) {
+      var tbody = document.getElementById('tableBody');
+      document.getElementById('tableCount').textContent =
+        rows.length + ' incident' + (rows.length !== 1 ? 's' : '');
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr class="placeholder-row"><td colspan="5">No incidents to display.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map(function(row) {
+        var origIdx = incidents.indexOf(row);
+        var color = typeColor(row['Incident Type']);
+        var title = (row['Title'] || '--');
+        var titleShort = title.length > 55 ? title.substring(0, 55) + '...' : title;
+        var loc = (row['Location'] || '--');
+        var locShort = loc.length > 40 ? loc.substring(0, 40) + '...' : loc;
+        return '<tr data-id="' + origIdx + '" class="' + (origIdx === activeRowId ? 'active' : '') + '">' +
+          '<td>' + (row['Date'] || '--') + '</td>' +
+          '<td><span class="type-badge" style="background:' + color + '">' + (row['Incident Type'] || '--') + '</span></td>' +
+          '<td title="' + title + '">' + titleShort + '</td>' +
+          '<td title="' + loc + '">' + locShort + '</td>' +
+          '<td>' + (row['Score'] || '--') + '</td>' +
+          '</tr>';
+      }).join('');
+
+      tbody.querySelectorAll('tr[data-id]').forEach(function(tr) {
+        tr.addEventListener('click', function() {
+          var id = parseInt(tr.dataset.id);
+          var row = incidents[id];
+          var lng = parseFloat(row['Longitude']);
+          var lat = parseFloat(row['Latitude']);
+
+          map.flyTo({ center: [lng, lat], zoom: 10, speed: 1.2 });
+
+          if (activePopup) activePopup.remove();
+          activePopup = new maplibregl.Popup({ maxWidth: '280px', offset: 12 })
+            .setLngLat([lng, lat])
+            .setHTML(
+              '<strong>' + (row['Incident Type'] || '') + '</strong>' +
+              '<div class="popup-title">' + (row['Title'] || '') + '</div>' +
+              '<div class="popup-meta">' +
+              '<span>Date: ' + (row['Date'] || '') + '</span>' +
+              '<span>Location: ' + (row['Location'] || '') + '</span>' +
+              (row['Score'] ? '<span>Score: ' + row['Score'] + '</span>' : '') +
+              (row['Convergence'] ? '<span>Convergence: ' + row['Convergence'] + '</span>' : '') +
+              '</div>'
+            )
+            .addTo(map);
+
+          highlightRow(id);
+        });
+      });
+    }
+
+    // STEP 8: HIGHLIGHT ROW + MARKER
+    function highlightRow(id) {
+      activeRowId = id;
+      document.querySelectorAll('#tableBody tr').forEach(function(tr) {
+        tr.classList.toggle('active', parseInt(tr.dataset.id) === id);
+      });
+      var activeEl = document.querySelector('#tableBody tr[data-id="' + id + '"]');
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    // COLUMN SORTING
+    document.querySelectorAll('#incidentTable thead th[data-col]').forEach(function(th) {
+      th.addEventListener('click', function() {
+        var col = th.dataset.col;
+        if (sortCol === col) {
+          sortAsc = !sortAsc;
+        } else {
+          sortCol = col;
+          sortAsc = true;
+        }
+
+        var sorted = incidents.slice().sort(function(a, b) {
+          var av = a[col] || '';
+          var bv = b[col] || '';
+          if (col === 'Score') return sortAsc ? parseFloat(av||0) - parseFloat(bv||0) : parseFloat(bv||0) - parseFloat(av||0);
+          return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+        });
+
+        document.querySelectorAll('.sort-icon').forEach(function(el) { el.textContent = String.fromCharCode(8597); });
+        th.querySelector('.sort-icon').textContent = sortAsc ? String.fromCharCode(8593) : String.fromCharCode(8595);
+
+        renderTable(sorted);
+      });
+    });
+
+    // LAYER SWITCHER
+    document.querySelectorAll('.layer-btn input').forEach(function(radio) {
+      radio.addEventListener('change', function(e) {
+        document.querySelectorAll('.layer-btn').forEach(function(b) { b.classList.remove('active'); });
+        e.target.closest('.layer-btn').classList.add('active');
+        console.log('Layer switched to:', e.target.value);
+      });
+    });
+  </script>
+
+  <style>
+    .popup-title {
+      font-size: 12px;
+      font-weight: 500;
+      margin: 4px 0 6px;
+      line-height: 1.4;
+      color: #e6edf3;
+    }
+    .popup-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 11.5px;
+      color: #8b949e;
+    }
+  </style>
+
+  <script>
+    // RESIZABLE SPLIT PANE
+    (function() {
+      var divider = document.getElementById('divider');
+      var layout  = divider.closest('.layout');
+      var dragging = false;
+
+      divider.addEventListener('mousedown', function(e) {
+        dragging = true;
+        divider.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var rect  = layout.getBoundingClientRect();
+        var leftW = e.clientX - rect.left;
+        var total = rect.width - 8; // subtract divider width
+        leftW = Math.max(200, Math.min(leftW, total - 200)); // min 200px each side
+        var pct = (leftW / rect.width * 100).toFixed(2);
+        layout.style.gridTemplateColumns = pct + '% 8px 1fr';
+        // tell MapLibre the container resized
+        if (window.map) map.resize();
+      });
+
+      document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        divider.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        if (window.map) map.resize();
+      });
+    })();
+  </script>
+
+</body>
+</html>
