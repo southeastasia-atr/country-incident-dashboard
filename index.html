@@ -448,7 +448,8 @@
     function buildWeaponsHtml(row) {
       var text = (row['Weapons'] || '').trim();
       if (!text) return '<span class="expand-none">No weapons recorded</span>';
-      var lines = text.split(/;|\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+      var lines = text.split(/\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim(); }).filter(Boolean);
       return lines.map(function(l){ return '<div class="expand-text">' + escHtml(l) + '</div>'; }).join('');
     }
 
