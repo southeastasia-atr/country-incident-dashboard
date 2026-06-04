@@ -371,6 +371,14 @@
       });
     }
 
+    function toISO(d) {
+      // Convert M/D/YYYY or MM/DD/YYYY to YYYY-MM-DD for comparison
+      if (!d) return '';
+      var parts = d.split('/');
+      if (parts.length !== 3) return d;
+      return parts[2] + '-' + parts[0].padStart(2,'0') + '-' + parts[1].padStart(2,'0');
+    }
+
     function applyFilters() {
       var dateFrom = document.getElementById('filterDateFrom').value;
       var dateTo   = document.getElementById('filterDateTo').value;
@@ -379,7 +387,7 @@
       var search   = document.getElementById('filterSearch').value.toLowerCase().trim();
 
       var filtered = incidents.filter(function(row) {
-        var d = row['Date'] || '';
+        var d = toISO(row['Date'] || '');
         if (dateFrom && d < dateFrom) return false;
         if (dateTo   && d > dateTo)   return false;
         if (typeVal  && (row['Incident Type']||'').trim() !== typeVal) return false;
