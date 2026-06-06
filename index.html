@@ -131,7 +131,7 @@
               <th data-col="Incident Type">Type <span class="sort-icon">&#8597;</span></th>
               <th data-col="Title">Title <span class="sort-icon">&#8597;</span></th>
               <th data-col="Location">Location <span class="sort-icon">&#8597;</span></th>
-              <th data-col="Score">Score <span class="sort-icon">&#8597;</span></th>
+              <th data-col="Score">Arms Score <span class="sort-icon">&#8597;</span></th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -253,6 +253,9 @@
               incident_type: row['Incident Type'] || '',
               title:         row['Title']         || '',
               location:      row['Location']      || '',
+              barangay:      row['Barangay']      || '',
+              municipality:  row['Municipality']  || '',
+              province:      row['Province']      || '',
               score:         row['Score']         || '',
               convergence:   row['Convergence']   || '',
               tags:          row['Tags']          || '',
@@ -315,7 +318,8 @@
             '<div class="popup-title">' + props.title + '</div>' +
             '<div class="popup-meta">' +
             '<span>Date: ' + props.date + '</span>' +
-            '<span>Location: ' + props.location + '</span>' +
+            (props.barangay    ? '<span>' + props.barangay + '</span>' : '') +
+            (props.municipality ? '<span>' + props.municipality + (props.province ? ', ' + props.province : '') + '</span>' : (props.province ? '<span>' + props.province + '</span>' : '')) +
             (props.score ? '<span>Score: ' + props.score + '</span>' : '') +
             (props.convergence ? '<span>Convergence: ' + props.convergence + '</span>' : '') +
             '</div>'
@@ -383,12 +387,24 @@
       });
     }
 
+    var MONTHS = {
+      'January':'01','February':'02','March':'03','April':'04','May':'05','June':'06',
+      'July':'07','August':'08','September':'09','October':'10','November':'11','December':'12'
+    };
+
     function toISO(d) {
-      // Convert M/D/YYYY or MM/DD/YYYY to YYYY-MM-DD for comparison
+      // Parse 'DD Month YYYY' -> 'YYYY-MM-DD' for date filter comparisons
       if (!d) return '';
-      var parts = d.split('/');
-      if (parts.length !== 3) return d;
-      return parts[2] + '-' + parts[0].padStart(2,'0') + '-' + parts[1].padStart(2,'0');
+      var parts = d.trim().split(' ');
+      if (parts.length === 3 && MONTHS[parts[1]]) {
+        return parts[2] + '-' + MONTHS[parts[1]] + '-' + parts[0].padStart(2, '0');
+      }
+      // Fallback: M/D/YYYY or MM/DD/YYYY
+      var slashParts = d.split('/');
+      if (slashParts.length === 3) {
+        return slashParts[2] + '-' + slashParts[0].padStart(2,'0') + '-' + slashParts[1].padStart(2,'0');
+      }
+      return d;
     }
 
     function applyFilters() {
@@ -519,8 +535,9 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
               '<div class="popup-title">' + escHtml(row['Title'] || '') + '</div>' +
               '<div class="popup-meta">' +
               '<span>Date: ' + escHtml(row['Date'] || '') + '</span>' +
-              '<span>Location: ' + escHtml(row['Location'] || '') + '</span>' +
-              (row['Score'] ? '<span>Score: ' + escHtml(row['Score']) + '</span>' : '') +
+              (row['Barangay']     ? '<span>' + escHtml(row['Barangay']) + '</span>' : '') +
+              (row['Municipality'] ? '<span>' + escHtml(row['Municipality']) + (row['Province'] ? ', ' + escHtml(row['Province']) : '') + '</span>' : (row['Province'] ? '<span>' + escHtml(row['Province']) + '</span>' : '')) +
+              (row['Score']       ? '<span>Score: ' + escHtml(row['Score']) + '</span>' : '') +
               (row['Convergence'] ? '<span>Convergence: ' + escHtml(row['Convergence']) + '</span>' : '') +
               '</div>'
             )

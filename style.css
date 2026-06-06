@@ -522,3 +522,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--text-muted);
   font-style: italic;
 }
+
+.expand-section--location {
+  flex: 0 0 auto;
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.expand-section--location .expand-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.expand-section--location .expand-text:first-of-type {
+  color: var(--text);
+  font-size: 12.5px;
+}
