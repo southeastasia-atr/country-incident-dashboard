@@ -445,7 +445,7 @@
           if (!rowActors.includes(actorVal)) return false;
         }
         if (search) {
-          var haystack = [row['Title'],row['Location'],row['Incident Type'],row['Tags'],row['Description']].join(' ').toLowerCase();
+          var haystack = [row['Title'],row['Location'],row['Incident Type'],row['Tags'],row['Description'],row['Actors'],row['Weapons']].join(' ').toLowerCase();
           if (!haystack.includes(search)) return false;
         }
         return true;
