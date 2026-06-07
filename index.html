@@ -13,6 +13,9 @@
   <!-- PapaParse (CSV parsing) -->
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -63,7 +66,7 @@
     <!-- Map panel -->
     <section class="map-panel">
 
-      <!-- Layer switcher sits at the top of the map panel -->
+      <!-- Layer switcher: top strip inside map panel -->
       <div class="layer-switcher" id="layerSwitcher">
         <label class="layer-btn active" data-layer="incidents">
           <input type="radio" name="layer" value="incidents" checked /> Incidents
@@ -79,7 +82,7 @@
         </label>
       </div>
 
-      <!-- Map and metrics share this space below the switcher -->
+      <!-- map and metrics share this space -->
       <div class="map-content">
         <div id="map"></div>
 
@@ -517,7 +520,6 @@
       currentFilteredRows = filtered;
       renderTable(filtered);
 
-      // Refresh metrics if panel is visible
       if (document.getElementById('metricsPanel').style.display !== 'none') {
         renderMetrics(filtered);
       }
@@ -851,6 +853,48 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
   </script>
 
   <style>
+    /* metrics panel fills .map-content */
+    .metrics-panel {
+      position: absolute;
+      inset: 0;
+      background: #0d1117;
+      overflow-y: auto;
+      z-index: 10;
+    }
+    .metrics-inner { padding: 16px 16px 32px; }
+    .metrics-section { margin-bottom: 24px; }
+    .metrics-section-title {
+      font-family: 'Georgia', serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: #e8962a;
+      border-bottom: 1px solid #21262d;
+      padding-bottom: 6px; margin: 0 0 12px 0;
+    }
+    .metrics-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .metrics-card {
+      flex: 1 1 200px;
+      background: #161b22; border: 1px solid #21262d;
+      border-radius: 6px; padding: 12px 14px 14px;
+      display: flex; flex-direction: column;
+    }
+    .metrics-card-narrow { flex: 0 1 150px; }
+    .metrics-card-medium { flex: 0 1 240px; }
+    .metrics-card-wide   { flex: 1 1 360px; }
+    .metrics-card-title {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase;
+      color: #8b949e; margin-bottom: 10px;
+    }
+    .metrics-chart-wrap { position: relative; flex: 1; min-height: 140px; }
+    .metrics-pie-wrap   { min-height: 180px; }
+    .metrics-empty {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; min-height: 80px;
+      font-size: 11px; color: #484f58; font-style: italic;
+    }
+    .map-legend { z-index: 11; }
+
     .popup-title {
       font-size: 12px;
       font-weight: 500;
@@ -865,76 +909,6 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       font-size: 11.5px;
       color: #8b949e;
     }
-
-    /* map-panel is a flex column: switcher on top, map-content fills below */
-    .map-panel {
-      display: flex;
-      flex-direction: column;
-    }
-    .map-content {
-      position: relative;
-      flex: 1;
-      min-height: 0;
-    }
-    .map-content #map {
-      position: absolute;
-      inset: 0;
-    }
-
-    /* metrics panel fills map-content */
-    .metrics-panel {
-      position: absolute;
-      inset: 0;
-      background: #0d1117;
-      overflow-y: auto;
-      z-index: 10;
-    }
-    .metrics-inner {
-      padding: 16px 16px 32px;
-    }
-    .metrics-section { margin-bottom: 24px; }
-    .metrics-section-title {
-      font-family: 'Georgia', serif;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #e8962a;
-      border-bottom: 1px solid #21262d;
-      padding-bottom: 6px;
-      margin: 0 0 12px 0;
-    }
-    .metrics-row { display: flex; gap: 10px; flex-wrap: wrap; }
-    .metrics-card {
-      flex: 1 1 200px;
-      background: #161b22;
-      border: 1px solid #21262d;
-      border-radius: 6px;
-      padding: 12px 14px 14px;
-      display: flex;
-      flex-direction: column;
-    }
-    .metrics-card-narrow { flex: 0 1 150px; }
-    .metrics-card-medium { flex: 0 1 240px; }
-    .metrics-card-wide   { flex: 1 1 360px; }
-    .metrics-card-title {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      color: #8b949e;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-    .metrics-chart-wrap { position: relative; flex: 1; min-height: 140px; }
-    .metrics-pie-wrap   { min-height: 180px; }
-    .metrics-empty {
-      display: flex; align-items: center; justify-content: center;
-      height: 100%; min-height: 80px;
-      font-size: 11px; color: #484f58; font-style: italic;
-    }
-
-    /* keep legend above metrics panel */
-    .map-legend { z-index: 11; }
   </style>
 
   <script>
