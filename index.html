@@ -227,7 +227,8 @@
         }
 
         buildFilters();
-        applyFilters();
+        // applyFilters() and buildLegend() called inside addIncidentLayer() once map is ready
+        renderTable(incidents); // populate table immediately while map loads
       })
       .catch(function(err) {
         console.error('Fetch error:', err);
@@ -338,6 +339,7 @@
 
       console.log('Incident layer added');
       buildLegend();
+      applyFilters();
     }
 
 
