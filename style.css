@@ -367,15 +367,15 @@ html, body {
 
 /* Per-column widths — date, type, location, score fixed; title expands */
 #incidentTable th:nth-child(1),
-#incidentTable td:nth-child(1) { width: 82px;  min-width: 82px; }
+#incidentTable td:nth-child(1) { width: 110px; min-width: 110px; }
 #incidentTable th:nth-child(2),
-#incidentTable td:nth-child(2) { width: 148px; min-width: 148px; }
+#incidentTable td:nth-child(2) { width: 140px; min-width: 140px; }
 #incidentTable th:nth-child(3),
-#incidentTable td:nth-child(3) { width: auto;  max-width: 0; }
+#incidentTable td:nth-child(3) { width: auto;  min-width: 240px; }
 #incidentTable th:nth-child(4),
-#incidentTable td:nth-child(4) { width: 180px; min-width: 180px; }
+#incidentTable td:nth-child(4) { width: 200px; min-width: 160px; }
 #incidentTable th:nth-child(5),
-#incidentTable td:nth-child(5) { width: 58px;  min-width: 58px; text-align: right; }
+#incidentTable td:nth-child(5) { width: 80px;  min-width: 80px; text-align: right; }
 
 .placeholder-row td {
   color: var(--text-muted);
