@@ -13,9 +13,6 @@
   <!-- PapaParse (CSV parsing) -->
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -65,8 +62,8 @@
 
     <!-- Map panel -->
     <section class="map-panel">
-      <div id="map"></div>
 
+      <!-- Layer switcher sits at the top of the map panel -->
       <div class="layer-switcher" id="layerSwitcher">
         <label class="layer-btn active" data-layer="incidents">
           <input type="radio" name="layer" value="incidents" checked /> Incidents
@@ -81,7 +78,61 @@
           <input type="radio" name="layer" value="metrics" /> Metrics
         </label>
       </div>
-      <div class="map-legend" id="mapLegend"></div>
+
+      <!-- Map and metrics share this space below the switcher -->
+      <div class="map-content">
+        <div id="map"></div>
+
+        <div id="metricsPanel" class="metrics-panel" style="display:none;">
+          <div class="metrics-inner">
+
+            <div class="metrics-section">
+              <h2 class="metrics-section-title">Weapons</h2>
+              <div class="metrics-row">
+                <div class="metrics-card">
+                  <div class="metrics-card-title">Firearms by Type</div>
+                  <div class="metrics-chart-wrap"><canvas id="chartFirearms"></canvas></div>
+                </div>
+                <div class="metrics-card">
+                  <div class="metrics-card-title">Grenades &amp; Munitions by Type</div>
+                  <div class="metrics-chart-wrap"><canvas id="chartGrenades"></canvas></div>
+                </div>
+                <div class="metrics-card metrics-card-narrow">
+                  <div class="metrics-card-title">Ammunition</div>
+                  <div class="metrics-chart-wrap"><canvas id="chartAmmo"></canvas></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metrics-section">
+              <h2 class="metrics-section-title">Incidents</h2>
+              <div class="metrics-row">
+                <div class="metrics-card metrics-card-medium">
+                  <div class="metrics-card-title">Incident Type Breakdown</div>
+                  <div class="metrics-chart-wrap metrics-pie-wrap"><canvas id="chartIncidentType"></canvas></div>
+                </div>
+                <div class="metrics-card">
+                  <div class="metrics-card-title">Convergence Incidents by Category</div>
+                  <div class="metrics-chart-wrap"><canvas id="chartConvergence"></canvas></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metrics-section">
+              <h2 class="metrics-section-title">Geography</h2>
+              <div class="metrics-row">
+                <div class="metrics-card metrics-card-wide">
+                  <div class="metrics-card-title">Top 10 Provinces by Incident Count</div>
+                  <div class="metrics-chart-wrap"><canvas id="chartProvinces"></canvas></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="map-legend" id="mapLegend"></div>
+      </div>
 
     </section>
 
@@ -150,58 +201,6 @@
     </section>
 
   </main>
-
-  <!-- METRICS PANEL (hidden until Metrics tab is active) -->
-  <div id="metricsPanel" class="metrics-panel" style="display:none;">
-    <div class="metrics-inner">
-
-      <!-- SECTION: Weapons -->
-      <div class="metrics-section">
-        <h2 class="metrics-section-title">Weapons</h2>
-        <div class="metrics-row">
-          <div class="metrics-card">
-            <div class="metrics-card-title">Firearms by Type</div>
-            <div class="metrics-chart-wrap"><canvas id="chartFirearms"></canvas></div>
-          </div>
-          <div class="metrics-card">
-            <div class="metrics-card-title">Grenades &amp; Munitions by Type</div>
-            <div class="metrics-chart-wrap"><canvas id="chartGrenades"></canvas></div>
-          </div>
-          <div class="metrics-card metrics-card-narrow">
-            <div class="metrics-card-title">Ammunition</div>
-            <div class="metrics-chart-wrap"><canvas id="chartAmmo"></canvas></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECTION: Incidents -->
-      <div class="metrics-section">
-        <h2 class="metrics-section-title">Incidents</h2>
-        <div class="metrics-row">
-          <div class="metrics-card metrics-card-medium">
-            <div class="metrics-card-title">Incident Type Breakdown</div>
-            <div class="metrics-chart-wrap metrics-pie-wrap"><canvas id="chartIncidentType"></canvas></div>
-          </div>
-          <div class="metrics-card">
-            <div class="metrics-card-title">Convergence Incidents by Category</div>
-            <div class="metrics-chart-wrap"><canvas id="chartConvergence"></canvas></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECTION: Geography -->
-      <div class="metrics-section">
-        <h2 class="metrics-section-title">Geography</h2>
-        <div class="metrics-row">
-          <div class="metrics-card metrics-card-wide">
-            <div class="metrics-card-title">Top 10 Provinces by Incident Count</div>
-            <div class="metrics-chart-wrap"><canvas id="chartProvinces"></canvas></div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
 
   <script>
     // COLOR MAP BY INCIDENT TYPE
@@ -676,16 +675,19 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
         e.target.closest('.layer-btn').classList.add('active');
         var val = e.target.value;
         var metricsPanel = document.getElementById('metricsPanel');
-        var layout = document.querySelector('.layout');
+        var mapEl = document.getElementById('map');
+        var legend = document.getElementById('mapLegend');
         if (val === 'metrics') {
           metricsPanel.style.display = 'block';
-          layout.style.visibility = 'hidden';
+          mapEl.style.display = 'none';
+          if (legend) legend.style.display = 'none';
           renderMetrics(currentFilteredRows);
         } else {
           metricsPanel.style.display = 'none';
-          layout.style.visibility = '';
+          mapEl.style.display = 'block';
+          if (legend) legend.style.display = '';
+          if (window.map) map.resize();
         }
-        console.log('Layer switched to:', val);
       });
     });
 
@@ -694,19 +696,18 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
     var currentFilteredRows = [];
     var metricsCharts = {};
 
-    // Firearm groups: label -> columns to sum
     var FIREARM_GROUPS = [
-      { label: 'Unspecified',       cols: ['Unspecified'] },
-      { label: 'Handgun',           cols: ['Pistol', 'Revolver', 'Craft handgun'] },
-      { label: 'Assault Rifle',     cols: ['Assault Rifle'] },
-      { label: 'Rifle',             cols: ['Rifle', 'Craft Rifle'] },
-      { label: 'Shotgun',           cols: ['Shotgun', 'Craft Shotgun'] },
-      { label: 'Submachine Gun',    cols: ['SMG', 'Craft SMG'] },
-      { label: 'Machine Gun',       cols: ['LMG', 'HMG'] },
-      { label: 'Grenade Launcher',  cols: ['GL', 'AGL'] },
-      { label: 'Anti-tank',         cols: ['RPG/ATW', 'Craft RPG'] },
-      { label: 'Mortar',            cols: ['Mortar'] },
-      { label: 'Advanced Weapon',   cols: ['ATGM', 'MANPADS'] },
+      { label: 'Unspecified',      cols: ['Unspecified'] },
+      { label: 'Handgun',          cols: ['Pistol', 'Revolver', 'Craft handgun'] },
+      { label: 'Assault Rifle',    cols: ['Assault Rifle'] },
+      { label: 'Rifle',            cols: ['Rifle', 'Craft Rifle'] },
+      { label: 'Shotgun',          cols: ['Shotgun', 'Craft Shotgun'] },
+      { label: 'Submachine Gun',   cols: ['SMG', 'Craft SMG'] },
+      { label: 'Machine Gun',      cols: ['LMG', 'HMG'] },
+      { label: 'Grenade Launcher', cols: ['GL', 'AGL'] },
+      { label: 'Anti-tank',        cols: ['RPG/ATW', 'Craft RPG'] },
+      { label: 'Mortar',           cols: ['Mortar'] },
+      { label: 'Advanced Weapon',  cols: ['ATGM', 'MANPADS'] },
     ];
 
     var GRENADE_GROUPS = [
@@ -739,10 +740,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
     }
 
     function destroyChart(id) {
-      if (metricsCharts[id]) {
-        metricsCharts[id].destroy();
-        delete metricsCharts[id];
-      }
+      if (metricsCharts[id]) { metricsCharts[id].destroy(); delete metricsCharts[id]; }
     }
 
     var CHART_DEFAULTS = {
@@ -750,48 +748,22 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       gridColor: 'rgba(255,255,255,0.06)',
       accent: '#e8962a',
       blue: '#4d90c4',
-      barColors: ['#e8962a','#4d90c4','#3a7abf','#d4791e','#5aabe0','#c4621a','#6bbde8'],
     };
 
     function makeHorizBar(canvasId, labels, data, color) {
       destroyChart(canvasId);
       var ctx = document.getElementById(canvasId);
       if (!ctx) return;
-      if (!data.some(function(v){ return v > 0; })) {
-        ctx.parentNode.innerHTML = '<div class="metrics-empty">No data</div>';
-        return;
-      }
-      // Filter out zeros
-      var pairs = labels.map(function(l,i){ return {l:l, v:data[i]}; }).filter(function(p){ return p.v > 0; });
+      var pairs = labels.map(function(l,i){ return {l:l,v:data[i]}; }).filter(function(p){ return p.v > 0; });
+      if (!pairs.length) { ctx.parentNode.innerHTML = '<div class="metrics-empty">No data</div>'; return; }
       pairs.sort(function(a,b){ return b.v - a.v; });
-
       metricsCharts[canvasId] = new Chart(ctx, {
         type: 'bar',
-        data: {
-          labels: pairs.map(function(p){ return p.l; }),
-          datasets: [{
-            data: pairs.map(function(p){ return p.v; }),
-            backgroundColor: color || CHART_DEFAULTS.accent,
-            borderRadius: 3,
-            borderSkipped: false,
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+        data: { labels: pairs.map(function(p){return p.l;}), datasets: [{ data: pairs.map(function(p){return p.v;}), backgroundColor: color||CHART_DEFAULTS.accent, borderRadius: 3, borderSkipped: false }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
           scales: {
-            x: {
-              ticks: { color: CHART_DEFAULTS.color, font: { size: 11 } },
-              grid: { color: CHART_DEFAULTS.gridColor },
-              border: { color: 'transparent' },
-            },
-            y: {
-              ticks: { color: CHART_DEFAULTS.color, font: { size: 11 } },
-              grid: { display: false },
-              border: { color: 'transparent' },
-            }
+            x: { ticks: { color: CHART_DEFAULTS.color, font:{size:11} }, grid: { color: CHART_DEFAULTS.gridColor }, border: { color: 'transparent' } },
+            y: { ticks: { color: CHART_DEFAULTS.color, font:{size:11} }, grid: { display: false }, border: { color: 'transparent' } }
           }
         }
       });
@@ -801,36 +773,14 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       destroyChart(canvasId);
       var ctx = document.getElementById(canvasId);
       if (!ctx) return;
-      if (!data.some(function(v){ return v > 0; })) {
-        ctx.parentNode.innerHTML = '<div class="metrics-empty">No data</div>';
-        return;
-      }
+      if (!data.some(function(v){return v>0;})) { ctx.parentNode.innerHTML = '<div class="metrics-empty">No data</div>'; return; }
       metricsCharts[canvasId] = new Chart(ctx, {
         type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: colors || CHART_DEFAULTS.accent,
-            borderRadius: 3,
-            borderSkipped: false,
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors||CHART_DEFAULTS.accent, borderRadius: 3, borderSkipped: false }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
           scales: {
-            x: {
-              ticks: { color: CHART_DEFAULTS.color, font: { size: 11 }, maxRotation: 30 },
-              grid: { display: false },
-              border: { color: 'transparent' },
-            },
-            y: {
-              ticks: { color: CHART_DEFAULTS.color, font: { size: 11 } },
-              grid: { color: CHART_DEFAULTS.gridColor },
-              border: { color: 'transparent' },
-            }
+            x: { ticks: { color: CHART_DEFAULTS.color, font:{size:11}, maxRotation: 30 }, grid: { display: false }, border: { color: 'transparent' } },
+            y: { ticks: { color: CHART_DEFAULTS.color, font:{size:11} }, grid: { color: CHART_DEFAULTS.gridColor }, border: { color: 'transparent' } }
           }
         }
       });
@@ -840,38 +790,13 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       destroyChart(canvasId);
       var ctx = document.getElementById(canvasId);
       if (!ctx) return;
-      if (!data.some(function(v){ return v > 0; })) {
-        ctx.parentNode.innerHTML = '<div class="metrics-empty">No data</div>';
-        return;
-      }
+      if (!data.some(function(v){return v>0;})) { ctx.parentNode.innerHTML = '<div class="metrics-empty">No data</div>'; return; }
       var PIE_COLORS = ['#e8962a','#4d90c4','#00b050','#e53935','#cc00cc','#9b59b6','#4472c4','#c8a800','#e91e63','#888888','#3a7abf','#d4791e'];
       metricsCharts[canvasId] = new Chart(ctx, {
         type: 'pie',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: labels.map(function(l, i){
-              return typeColor(l) !== DEFAULT_COLOR ? typeColor(l) : PIE_COLORS[i % PIE_COLORS.length];
-            }),
-            borderColor: '#161b22',
-            borderWidth: 2,
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: {
-                color: CHART_DEFAULTS.color,
-                font: { size: 11 },
-                padding: 10,
-                boxWidth: 12,
-              }
-            }
-          }
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: labels.map(function(l,i){ return typeColor(l) !== DEFAULT_COLOR ? typeColor(l) : PIE_COLORS[i%PIE_COLORS.length]; }), borderColor: '#161b22', borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'right', labels: { color: CHART_DEFAULTS.color, font:{size:11}, padding:10, boxWidth:12 } } }
         }
       });
     }
@@ -880,32 +805,11 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       destroyChart(canvasId);
       var ctx = document.getElementById(canvasId);
       if (!ctx) return;
-      if (!value) {
-        ctx.parentNode.innerHTML = '<div class="metrics-empty">No data</div>';
-        return;
-      }
+      if (!value) { ctx.parentNode.innerHTML = '<div class="metrics-empty">No data</div>'; return; }
       metricsCharts[canvasId] = new Chart(ctx, {
         type: 'bar',
-        data: {
-          labels: ['Rounds / items'],
-          datasets: [{
-            data: [value],
-            backgroundColor: CHART_DEFAULTS.blue,
-            borderRadius: 4,
-            borderSkipped: false,
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: function(ctx) { return ' ' + ctx.raw.toLocaleString() + ' rounds/items'; }
-              }
-            }
-          },
+        data: { labels: ['Rounds / items'], datasets: [{ data: [value], backgroundColor: CHART_DEFAULTS.blue, borderRadius: 4, borderSkipped: false }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx){ return ' ' + ctx.raw.toLocaleString() + ' rounds/items'; } } } },
           scales: {
             x: { ticks: { color: CHART_DEFAULTS.color, font:{size:11} }, grid:{display:false}, border:{color:'transparent'} },
             y: { ticks: { color: CHART_DEFAULTS.color, font:{size:11} }, grid:{color:CHART_DEFAULTS.gridColor}, border:{color:'transparent'} }
@@ -917,66 +821,32 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
     function renderMetrics(rows) {
       if (!rows || !rows.length) rows = incidents;
 
-      // --- FIREARMS ---
       var firearmData = sumGroups(rows, FIREARM_GROUPS);
-      makeHorizBar('chartFirearms',
-        firearmData.map(function(d){ return d.label; }),
-        firearmData.map(function(d){ return d.value; }),
-        CHART_DEFAULTS.accent
-      );
+      makeHorizBar('chartFirearms', firearmData.map(function(d){return d.label;}), firearmData.map(function(d){return d.value;}), CHART_DEFAULTS.accent);
 
-      // --- GRENADES & MUNITIONS ---
       var grenadeData = sumGroups(rows, GRENADE_GROUPS);
-      makeHorizBar('chartGrenades',
-        grenadeData.map(function(d){ return d.label; }),
-        grenadeData.map(function(d){ return d.value; }),
-        '#c0392b'
-      );
+      makeHorizBar('chartGrenades', grenadeData.map(function(d){return d.label;}), grenadeData.map(function(d){return d.value;}), '#c0392b');
 
-      // --- AMMO ---
-      var ammoTotal = sumCol(rows, 'Ammo');
-      makeSingleBar('chartAmmo', ammoTotal);
+      makeSingleBar('chartAmmo', sumCol(rows, 'Ammo'));
 
-      // --- INCIDENT TYPE PIE ---
       var typeCounts = {};
-      rows.forEach(function(r) {
-        var t = (r['Incident Type'] || 'Unknown').trim();
-        typeCounts[t] = (typeCounts[t] || 0) + 1;
-      });
-      var typeEntries = Object.entries(typeCounts).sort(function(a,b){ return b[1]-a[1]; });
+      rows.forEach(function(r){ var t=(r['Incident Type']||'Unknown').trim(); typeCounts[t]=(typeCounts[t]||0)+1; });
+      var typeEntries = Object.entries(typeCounts).sort(function(a,b){return b[1]-a[1];});
       makePie('chartIncidentType', typeEntries.map(function(e){return e[0];}), typeEntries.map(function(e){return e[1];}));
 
-      // --- CONVERGENCE BAR ---
       var convCounts = {};
-      rows.forEach(function(r) {
-        var raw = (r['Convergence'] || '').trim();
-        if (!raw) return;
-        raw.split(/[\n,;]+/).forEach(function(c){
-          c = c.trim();
-          if (c) convCounts[c] = (convCounts[c] || 0) + 1;
-        });
+      rows.forEach(function(r){
+        (r['Convergence']||'').trim().split(/[
+,;]+/).forEach(function(c){ c=c.trim(); if(c) convCounts[c]=(convCounts[c]||0)+1; });
       });
-      var convEntries = Object.entries(convCounts).sort(function(a,b){ return b[1]-a[1]; });
-      if (convEntries.length) {
-        makeHorizBar('chartConvergence', convEntries.map(function(e){return e[0];}), convEntries.map(function(e){return e[1];}), CHART_DEFAULTS.blue);
-      } else {
-        var convCtx = document.getElementById('chartConvergence');
-        if (convCtx) convCtx.parentNode.innerHTML = '<div class="metrics-empty">No convergence data</div>';
-      }
+      var convEntries = Object.entries(convCounts).sort(function(a,b){return b[1]-a[1];});
+      if (convEntries.length) makeHorizBar('chartConvergence', convEntries.map(function(e){return e[0];}), convEntries.map(function(e){return e[1];}), CHART_DEFAULTS.blue);
+      else { var el=document.getElementById('chartConvergence'); if(el) el.parentNode.innerHTML='<div class="metrics-empty">No convergence data</div>'; }
 
-      // --- TOP 10 PROVINCES ---
       var provCounts = {};
-      rows.forEach(function(r) {
-        var p = (r['Province'] || '').trim();
-        if (!p) return;
-        provCounts[p] = (provCounts[p] || 0) + 1;
-      });
-      var provEntries = Object.entries(provCounts).sort(function(a,b){ return b[1]-a[1]; }).slice(0,10);
-      makeVertBar('chartProvinces',
-        provEntries.map(function(e){ return e[0]; }),
-        provEntries.map(function(e){ return e[1]; }),
-        provEntries.map(function(_,i){ return i % 2 === 0 ? CHART_DEFAULTS.accent : CHART_DEFAULTS.blue; })
-      );
+      rows.forEach(function(r){ var p=(r['Province']||'').trim(); if(p) provCounts[p]=(provCounts[p]||0)+1; });
+      var provEntries = Object.entries(provCounts).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+      makeVertBar('chartProvinces', provEntries.map(function(e){return e[0];}), provEntries.map(function(e){return e[1];}), provEntries.map(function(_,i){return i%2===0?CHART_DEFAULTS.accent:CHART_DEFAULTS.blue;}));
     }
   </script>
 
@@ -996,77 +866,75 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       color: #8b949e;
     }
 
-    /* ── METRICS PANEL ─────────────────────────────────────── */
+    /* map-panel is a flex column: switcher on top, map-content fills below */
+    .map-panel {
+      display: flex;
+      flex-direction: column;
+    }
+    .map-content {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+    .map-content #map {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* metrics panel fills map-content */
     .metrics-panel {
-      position: fixed;
-      top: 52px; /* below header */
-      left: 0; right: 0; bottom: 0;
+      position: absolute;
+      inset: 0;
       background: #0d1117;
       overflow-y: auto;
-      z-index: 200;
+      z-index: 10;
     }
     .metrics-inner {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 28px 32px 48px;
+      padding: 16px 16px 32px;
     }
-    .metrics-section {
-      margin-bottom: 36px;
-    }
+    .metrics-section { margin-bottom: 24px; }
     .metrics-section-title {
       font-family: 'Georgia', serif;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 600;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: #e8962a;
       border-bottom: 1px solid #21262d;
-      padding-bottom: 8px;
-      margin: 0 0 18px 0;
+      padding-bottom: 6px;
+      margin: 0 0 12px 0;
     }
-    .metrics-row {
-      display: flex;
-      gap: 18px;
-      flex-wrap: wrap;
-    }
+    .metrics-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .metrics-card {
-      flex: 1 1 260px;
+      flex: 1 1 200px;
       background: #161b22;
       border: 1px solid #21262d;
       border-radius: 6px;
-      padding: 18px 20px 20px;
+      padding: 12px 14px 14px;
       display: flex;
       flex-direction: column;
     }
-    .metrics-card-narrow { flex: 0 1 200px; }
-    .metrics-card-medium { flex: 0 1 320px; }
-    .metrics-card-wide   { flex: 1 1 600px; }
+    .metrics-card-narrow { flex: 0 1 150px; }
+    .metrics-card-medium { flex: 0 1 240px; }
+    .metrics-card-wide   { flex: 1 1 360px; }
     .metrics-card-title {
-      font-size: 11.5px;
+      font-size: 10px;
       font-weight: 600;
       letter-spacing: 0.04em;
       color: #8b949e;
       text-transform: uppercase;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
     }
-    .metrics-chart-wrap {
-      position: relative;
-      flex: 1;
-      min-height: 180px;
-    }
-    .metrics-pie-wrap {
-      min-height: 220px;
-    }
+    .metrics-chart-wrap { position: relative; flex: 1; min-height: 140px; }
+    .metrics-pie-wrap   { min-height: 180px; }
     .metrics-empty {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      min-height: 120px;
-      font-size: 12px;
-      color: #484f58;
-      font-style: italic;
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; min-height: 80px;
+      font-size: 11px; color: #484f58; font-style: italic;
     }
+
+    /* keep legend above metrics panel */
+    .map-legend { z-index: 11; }
   </style>
 
   <script>
