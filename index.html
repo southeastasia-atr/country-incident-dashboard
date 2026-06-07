@@ -838,8 +838,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
 
       var convCounts = {};
       rows.forEach(function(r){
-        (r['Convergence']||'').trim().split(/[
-,;]+/).forEach(function(c){ c=c.trim(); if(c) convCounts[c]=(convCounts[c]||0)+1; });
+        (r['Convergence']||'').trim().split(/[,;\n\r]+/).forEach(function(c){ c=c.trim(); if(c) convCounts[c]=(convCounts[c]||0)+1; });
       });
       var convEntries = Object.entries(convCounts).sort(function(a,b){return b[1]-a[1];});
       if (convEntries.length) makeHorizBar('chartConvergence', convEntries.map(function(e){return e[0];}), convEntries.map(function(e){return e[1];}), CHART_DEFAULTS.blue);
