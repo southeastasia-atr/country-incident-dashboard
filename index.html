@@ -111,9 +111,9 @@
         </div>
 
         <div class="filter-group">
-          <label class="filter-label">Convergence</label>
-          <select class="filter-input filter-select filter-disabled" disabled title="Coming soon">
-            <option>All convergence</option>
+          <label class="filter-label">Actors</label>
+          <select id="filterActor" class="filter-input filter-select">
+            <option value="">All actors</option>
           </select>
         </div>
 
@@ -372,8 +372,21 @@
         var o = document.createElement('option'); o.value = t; o.textContent = t; tagEl.appendChild(o);
       });
 
+      // Populate actor dropdown from Actor Categories field
+      var actorSet = {};
+      incidents.forEach(function(r){
+        (r['Actor Categories'] || '').split('\n').forEach(function(a){
+          a = a.trim();
+          if (a) actorSet[a] = true;
+        });
+      });
+      var actorEl = document.getElementById('filterActor');
+      Object.keys(actorSet).sort().forEach(function(a){
+        var o = document.createElement('option'); o.value = a; o.textContent = a; actorEl.appendChild(o);
+      });
+
       // Wire up all filter inputs
-      ['filterDateFrom','filterDateTo','filterType','filterTag','filterSearch'].forEach(function(id){
+      ['filterDateFrom','filterDateTo','filterType','filterTag','filterActor','filterSearch'].forEach(function(id){
         document.getElementById(id).addEventListener('input', applyFilters);
       });
 
@@ -382,6 +395,7 @@
         document.getElementById('filterDateTo').value = '';
         document.getElementById('filterType').value = '';
         document.getElementById('filterTag').value = '';
+        document.getElementById('filterActor').value = '';
         document.getElementById('filterSearch').value = '';
         applyFilters();
       });
@@ -412,6 +426,7 @@
       var dateTo   = document.getElementById('filterDateTo').value;
       var typeVal  = document.getElementById('filterType').value;
       var tagVal   = document.getElementById('filterTag').value;
+      var actorVal = document.getElementById('filterActor').value;
       var search   = document.getElementById('filterSearch').value.toLowerCase().trim();
 
       var filtered = incidents.filter(function(row) {
@@ -422,6 +437,10 @@
         if (tagVal) {
           var rowTags = (row['Tags']||'').split(/[\n,]/).map(normaliseTag);
           if (!rowTags.includes(tagVal)) return false;
+        }
+        if (actorVal) {
+          var rowActors = (row['Actor Categories']||'').split('\n').map(function(a){ return a.trim(); });
+          if (!rowActors.includes(actorVal)) return false;
         }
         if (search) {
           var haystack = [row['Title'],row['Location'],row['Incident Type'],row['Tags'],row['Description']].join(' ').toLowerCase();
