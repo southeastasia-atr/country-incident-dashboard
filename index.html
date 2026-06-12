@@ -836,9 +836,18 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       var typeEntries = Object.entries(typeCounts).sort(function(a,b){return b[1]-a[1];});
       makePie('chartIncidentType', typeEntries.map(function(e){return e[0];}), typeEntries.map(function(e){return e[1];}));
 
+      var CONVERGENCE_CATEGORIES = [
+        'Drug trafficking', 'Human trafficking', 'Wildlife trafficking',
+        'Illicit business', 'Environmental crime', 'Illicit goods', 'Criminal services'
+      ];
       var convCounts = {};
       rows.forEach(function(r){
-        (r['Convergence']||'').trim().split(/[,;\n\r]+/).forEach(function(c){ c=c.trim(); if(c) convCounts[c]=(convCounts[c]||0)+1; });
+        (r['Convergence']||'').trim().split(/[,;\n\r]+/).forEach(function(c){
+          c = c.trim();
+          if (!c) return;
+          var match = CONVERGENCE_CATEGORIES.find(function(cat){ return c.toLowerCase().startsWith(cat.toLowerCase()); });
+          if (match) convCounts[match] = (convCounts[match]||0) + 1;
+        });
       });
       var convEntries = Object.entries(convCounts).sort(function(a,b){return b[1]-a[1];});
       if (convEntries.length) makeHorizBar('chartConvergence', convEntries.map(function(e){return e[0];}), convEntries.map(function(e){return e[1];}), CHART_DEFAULTS.blue);
@@ -887,6 +896,10 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
     }
     .metrics-chart-wrap { position: relative; flex: 1; min-height: 140px; }
     .metrics-pie-wrap   { min-height: 180px; }
+    #chartFirearms { min-height: 260px; }
+    .metrics-chart-wrap:has(#chartFirearms) { min-height: 260px; }
+    #chartProvinces { min-height: 300px; }
+    .metrics-chart-wrap:has(#chartProvinces) { min-height: 300px; }
     .metrics-empty {
       display: flex; align-items: center; justify-content: center;
       height: 100%; min-height: 80px;
