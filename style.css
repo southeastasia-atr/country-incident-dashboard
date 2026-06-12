@@ -381,20 +381,22 @@ html, body {
 #incidentTable td:nth-child(4) { width: 180px; min-width: 140px; }
 #incidentTable th:nth-child(5),
 #incidentTable td:nth-child(5) {
-  width: 88px; min-width: 88px;
+  width: 72px; min-width: 72px;
   text-align: right;
   position: sticky;
   right: 0;
   background: var(--bg);
-  box-shadow: -4px 0 8px rgba(0,0,0,.35);
 }
 /* sticky header cell needs slightly higher z-index to sit above body cells */
 #incidentTable thead th:nth-child(5) {
   z-index: 2;
 }
-/* active-row tint for the sticky cell */
+/* hover/active rows: keep sticky cell consistent with row state */
+#incidentTable tbody tr:hover td:nth-child(5) {
+  background: var(--surface-2);
+}
 #incidentTable tbody tr.active td:nth-child(5) {
-  background: #1a1f2b;
+  background: var(--accent-dim);
 }
 
 .placeholder-row td {
