@@ -71,11 +71,11 @@
         <label class="layer-btn active" data-layer="incidents">
           <input type="radio" name="layer" value="incidents" checked /> Incidents
         </label>
-        <label class="layer-btn" data-layer="scoring">
-          <input type="radio" name="layer" value="scoring" /> Scoring
+        <label class="layer-btn" data-layer="arms-score">
+          <input type="radio" name="layer" value="arms-score" /> Arms Score
         </label>
-        <label class="layer-btn" data-layer="heatmap">
-          <input type="radio" name="layer" value="heatmap" /> Heatmap
+        <label class="layer-btn" data-layer="crime-convergence">
+          <input type="radio" name="layer" value="crime-convergence" /> Crime Convergence
         </label>
         <label class="layer-btn" data-layer="metrics">
           <input type="radio" name="layer" value="metrics" /> Metrics
@@ -670,6 +670,115 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       });
     });
 
+    // ── ARMS SCORE BOUNDARY LAYERS ─────────────────────────────
+    // Paths relative to index.html — place GeoJSON files in a data/ subfolder
+    var ARMS_SCORE_GEOJSON = {
+      municipality: 'data/phl_admin3.geojson',
+      province:     'data/phl_admin2.geojson'
+    };
+
+    // Track which level is active ('municipality' | 'province')
+    var armsScoreLevel = 'municipality';
+    var armsScoreLoaded = { municipality: false, province: false };
+
+    function showArmsScoreLayers(level) {
+      // Hide both boundary layers first
+      ['municipality', 'province'].forEach(function(lvl) {
+        if (map.getLayer('arms-fill-' + lvl))   map.setLayoutProperty('arms-fill-' + lvl,   'visibility', 'none');
+        if (map.getLayer('arms-border-' + lvl)) map.setLayoutProperty('arms-border-' + lvl, 'visibility', 'none');
+      });
+      // Show the chosen level
+      if (map.getLayer('arms-fill-' + level))   map.setLayoutProperty('arms-fill-' + level,   'visibility', 'visible');
+      if (map.getLayer('arms-border-' + level)) map.setLayoutProperty('arms-border-' + level, 'visibility', 'visible');
+    }
+
+    function loadArmsScoreLevel(level, callback) {
+      if (armsScoreLoaded[level]) { if (callback) callback(); return; }
+      fetch(ARMS_SCORE_GEOJSON[level])
+        .then(function(r) {
+          if (!r.ok) throw new Error('GeoJSON fetch failed: ' + r.status + ' ' + r.statusText);
+          return r.json();
+        })
+        .then(function(gj) {
+          map.addSource('arms-' + level, { type: 'geojson', data: gj });
+
+          // Boundary fill — transparent placeholder; will carry score data later
+          map.addLayer({
+            id: 'arms-fill-' + level,
+            type: 'fill',
+            source: 'arms-' + level,
+            layout: { visibility: 'none' },
+            paint: {
+              'fill-color': '#334',
+              'fill-opacity': 0.15
+            }
+          }, 'incidents-halo'); // insert below incident points
+
+          // Boundary outline
+          map.addLayer({
+            id: 'arms-border-' + level,
+            type: 'line',
+            source: 'arms-' + level,
+            layout: { visibility: 'none' },
+            paint: {
+              'line-color': '#8b949e',
+              'line-width': level === 'province' ? 1.2 : 0.6,
+              'line-opacity': 0.7
+            }
+          }, 'incidents-halo'); // insert below incident points
+
+          armsScoreLoaded[level] = true;
+          if (callback) callback();
+        })
+        .catch(function(err) {
+          console.error('Arms Score GeoJSON load error (' + level + '):', err);
+          document.getElementById('mapLegend').innerHTML =
+            '<div style="color:#e53935;font-size:11px;padding:8px;">Could not load boundary file.<br>Place phl_admin2.geojson / phl_admin3.geojson in a <em>data/</em> subfolder.</div>';
+        });
+    }
+
+    function activateArmsScoreTab() {
+      // Hide incident layers
+      ['incidents-circles', 'incidents-halo'].forEach(function(id) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+      });
+
+      // Build legend + toggle UI
+      var legend = document.getElementById('mapLegend');
+      legend.innerHTML =
+        '<div class="legend-title">Arms Score</div>' +
+        '<div style="margin-bottom:6px;">' +
+        '<label style="font-size:11px;color:#8b949e;cursor:pointer;margin-right:10px;">' +
+        '<input type="radio" name="armsLevel" value="municipality" ' + (armsScoreLevel==='municipality'?'checked':'') + ' style="margin-right:4px;">Municipality</label>' +
+        '<label style="font-size:11px;color:#8b949e;cursor:pointer;">' +
+        '<input type="radio" name="armsLevel" value="province" ' + (armsScoreLevel==='province'?'checked':'') + ' style="margin-right:4px;">Province</label>' +
+        '</div>' +
+        '<div style="color:#484f58;font-size:10px;font-style:italic;">Boundary preview — score data coming soon</div>';
+
+      legend.querySelectorAll('input[name="armsLevel"]').forEach(function(r) {
+        r.addEventListener('change', function(e) {
+          armsScoreLevel = e.target.value;
+          loadArmsScoreLevel(armsScoreLevel, function() {
+            showArmsScoreLayers(armsScoreLevel);
+          });
+        });
+      });
+
+      loadArmsScoreLevel(armsScoreLevel, function() {
+        showArmsScoreLayers(armsScoreLevel);
+      });
+    }
+
+    function deactivateArmsScoreTab() {
+      ['incidents-circles', 'incidents-halo'].forEach(function(id) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
+      });
+      ['municipality', 'province'].forEach(function(lvl) {
+        if (map.getLayer('arms-fill-' + lvl))   map.setLayoutProperty('arms-fill-' + lvl,   'visibility', 'none');
+        if (map.getLayer('arms-border-' + lvl)) map.setLayoutProperty('arms-border-' + lvl, 'visibility', 'none');
+      });
+    }
+
     // LAYER SWITCHER
     document.querySelectorAll('.layer-btn input').forEach(function(radio) {
       radio.addEventListener('change', function(e) {
@@ -679,6 +788,10 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
         var metricsPanel = document.getElementById('metricsPanel');
         var mapEl = document.getElementById('map');
         var legend = document.getElementById('mapLegend');
+
+        // Deactivate arms score if leaving that tab
+        if (val !== 'arms-score') deactivateArmsScoreTab();
+
         if (val === 'metrics') {
           metricsPanel.style.display = 'block';
           mapEl.style.display = 'none';
@@ -689,6 +802,14 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
           mapEl.style.display = 'block';
           if (legend) legend.style.display = '';
           if (window.map) map.resize();
+
+          if (val === 'arms-score') {
+            activateArmsScoreTab();
+          } else if (val === 'incidents') {
+            buildLegend(); // restore incident type legend
+          } else {
+            if (legend) legend.innerHTML = ''; // placeholder for crime-convergence tab
+          }
         }
       });
     });
