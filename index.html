@@ -91,7 +91,7 @@
 
             <div class="metrics-section">
               <h2 class="metrics-section-title">Weapons</h2>
-              <div class="metrics-row">
+              <div class="metrics-row metrics-row-nowrap">
                 <div class="metrics-card">
                   <div class="metrics-card-title">Firearms by Type</div>
                   <div class="metrics-chart-wrap"><canvas id="chartFirearms"></canvas></div>
@@ -100,7 +100,7 @@
                   <div class="metrics-card-title">Grenades &amp; Munitions by Type</div>
                   <div class="metrics-chart-wrap"><canvas id="chartGrenades"></canvas></div>
                 </div>
-                <div class="metrics-card metrics-card-narrow">
+                <div class="metrics-card metrics-card-ammo">
                   <div class="metrics-card-title">Ammunition</div>
                   <div class="metrics-chart-wrap"><canvas id="chartAmmo"></canvas></div>
                 </div>
@@ -880,6 +880,9 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       padding-bottom: 6px; margin: 0 0 12px 0;
     }
     .metrics-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .metrics-row-nowrap { flex-wrap: nowrap; }
+    .metrics-row-nowrap .metrics-card { flex: 1 1 0; min-width: 0; }
+    .metrics-card-ammo { flex: 0 0 160px !important; min-width: 0; }
     .metrics-card {
       flex: 1 1 200px;
       background: #161b22; border: 1px solid #21262d;
