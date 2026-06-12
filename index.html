@@ -382,7 +382,7 @@
             '<span>Date: ' + props.date + '</span>' +
             (props.barangay    ? '<span>' + props.barangay + '</span>' : '') +
             (props.municipality ? '<span>' + props.municipality + (props.province ? ', ' + props.province : '') + '</span>' : (props.province ? '<span>' + props.province + '</span>' : '')) +
-            (props.score ? '<span>Score: ' + props.score + '</span>' : '') +
+            (props.score ? '<span>Score: ' + parseFloat(props.score).toFixed(1) + '</span>' : '') +
             (props.convergence ? '<span>Convergence: ' + props.convergence + '</span>' : '') +
             '</div>'
           )
@@ -583,7 +583,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
           '<td><span class="type-badge" style="background:' + color + '">' + escHtml(row['Incident Type'] || '--') + '</span></td>' +
           '<td title="' + escHtml(title) + '">' + escHtml(titleShort) + '</td>' +
           '<td title="' + escHtml(loc) + '">' + escHtml(locShort) + '</td>' +
-          '<td>' + escHtml(row['Score'] || '--') + '</td>' +
+          '<td>' + (row['Score'] ? parseFloat(row['Score']).toFixed(1) : '--') + '</td>' +
           '</tr>' +
           '<tr class="expand-row" data-expand-id="' + origIdx + '">' +
           '<td colspan="5">' +
@@ -624,7 +624,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
               '<span>Date: ' + escHtml(row['Date'] || '') + '</span>' +
               (row['Barangay']     ? '<span>' + escHtml(row['Barangay']) + '</span>' : '') +
               (row['Municipality'] ? '<span>' + escHtml(row['Municipality']) + (row['Province'] ? ', ' + escHtml(row['Province']) : '') + '</span>' : (row['Province'] ? '<span>' + escHtml(row['Province']) + '</span>' : '')) +
-              (row['Score']       ? '<span>Score: ' + escHtml(row['Score']) + '</span>' : '') +
+              (row['Score']       ? '<span>Score: ' + parseFloat(row['Score']).toFixed(1) + '</span>' : '') +
               (row['Convergence'] ? '<span>Convergence: ' + escHtml(row['Convergence']) + '</span>' : '') +
               '</div>'
             )
