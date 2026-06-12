@@ -191,7 +191,7 @@
               <th data-col="Incident Type">Type <span class="sort-icon">&#8597;</span></th>
               <th data-col="Title">Title <span class="sort-icon">&#8597;</span></th>
               <th data-col="Location">Location <span class="sort-icon">&#8597;</span></th>
-              <th data-col="Score">Arms Score <span class="sort-icon">&#8597;</span></th>
+              <th data-col="Arms Score">Arms Score <span class="sort-icon">&#8597;</span></th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -318,7 +318,7 @@
               barangay:      row['Barangay']      || '',
               municipality:  row['Municipality']  || '',
               province:      row['Province']      || '',
-              score:         row['Score']         || '',
+              score:         row['Arms Score']         || '',
               convergence:   row['Convergence']   || '',
               tags:          row['Tags']          || '',
               source:        row['Source']        || '',
@@ -583,7 +583,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
           '<td><span class="type-badge" style="background:' + color + '">' + escHtml(row['Incident Type'] || '--') + '</span></td>' +
           '<td title="' + escHtml(title) + '">' + escHtml(titleShort) + '</td>' +
           '<td title="' + escHtml(loc) + '">' + escHtml(locShort) + '</td>' +
-          '<td>' + (row['Score'] ? parseFloat(row['Score']).toFixed(1) : '--') + '</td>' +
+          '<td>' + (row['Arms Score'] ? parseFloat(row['Arms Score']).toFixed(1) : '--') + '</td>' +
           '</tr>' +
           '<tr class="expand-row" data-expand-id="' + origIdx + '">' +
           '<td colspan="5">' +
@@ -624,7 +624,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
               '<span>Date: ' + escHtml(row['Date'] || '') + '</span>' +
               (row['Barangay']     ? '<span>' + escHtml(row['Barangay']) + '</span>' : '') +
               (row['Municipality'] ? '<span>' + escHtml(row['Municipality']) + (row['Province'] ? ', ' + escHtml(row['Province']) : '') + '</span>' : (row['Province'] ? '<span>' + escHtml(row['Province']) + '</span>' : '')) +
-              (row['Score']       ? '<span>Score: ' + parseFloat(row['Score']).toFixed(1) + '</span>' : '') +
+              (row['Arms Score']       ? '<span>Score: ' + parseFloat(row['Arms Score']).toFixed(1) + '</span>' : '') +
               (row['Convergence'] ? '<span>Convergence: ' + escHtml(row['Convergence']) + '</span>' : '') +
               '</div>'
             )
@@ -659,7 +659,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
         var sorted = incidents.slice().sort(function(a, b) {
           var av = a[col] || '';
           var bv = b[col] || '';
-          if (col === 'Score') return sortAsc ? parseFloat(av||0) - parseFloat(bv||0) : parseFloat(bv||0) - parseFloat(av||0);
+          if (col === 'Arms Score') return sortAsc ? parseFloat(av||0) - parseFloat(bv||0) : parseFloat(bv||0) - parseFloat(av||0);
           return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
         });
 
