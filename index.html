@@ -225,6 +225,43 @@
     };
     const DEFAULT_COLOR = '#8b949e';
 
+    // CONVERGENCE CATEGORIES & COLORS
+    const CONVERGENCE_COLORS = {
+      'Drug trafficking':    '#e53935',  // red
+      'Human trafficking':   '#e91e63',  // pink
+      'Wildlife trafficking':'#00b050',  // green
+      'Illicit business':    '#c8a800',  // golden yellow
+      'Environmental crime': '#4d90c4',  // blue
+      'Illicit goods':       '#ff9900',  // orange
+      'Criminal services':   '#9b59b6',  // purple
+    };
+    const CONVERGENCE_DEFAULT = '#8b949e';
+
+    function convergenceCategory(val) {
+      if (!val) return null;
+      var v = val.trim();
+      for (var cat in CONVERGENCE_COLORS) {
+        if (v.toLowerCase().startsWith(cat.toLowerCase())) return cat;
+      }
+      return null;
+    }
+
+    function convergenceColor(val) {
+      var cat = convergenceCategory(val);
+      return cat ? CONVERGENCE_COLORS[cat] : CONVERGENCE_DEFAULT;
+    }
+
+    // Return the first convergence category found in a (possibly multi-value) field
+    function primaryConvergenceColor(field) {
+      if (!field) return CONVERGENCE_DEFAULT;
+      var parts = field.split(/[,;\n\r]+/);
+      for (var i = 0; i < parts.length; i++) {
+        var col = convergenceColor(parts[i].trim());
+        if (col !== CONVERGENCE_DEFAULT) return col;
+      }
+      return CONVERGENCE_DEFAULT;
+    }
+
     function typeColor(type) {
       if (!type) return DEFAULT_COLOR;
       for (const [key, val] of Object.entries(TYPE_COLORS)) {
@@ -529,6 +566,10 @@
       if (activeLayer && activeLayer.value === 'arms-score') {
         updateArmsHeatmap(filtered);
       }
+      // Update convergence layer if that tab is active
+      if (activeLayer && activeLayer.value === 'crime-convergence') {
+        updateConvergenceLayer(filtered);
+      }
     }
 
     // LEGEND
@@ -772,7 +813,156 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       }
     }
 
-        // LAYER SWITCHER
+    // ── CRIME CONVERGENCE LAYER ──────────────────────────────────
+    var convergenceLayerAdded = false;
+    var convergenceHoverPopup = null;
+
+    function toConvergenceGeoJSON(rows) {
+      return {
+        type: 'FeatureCollection',
+        features: rows
+          .filter(function(row) { return row['Convergence'] && row['Convergence'].trim(); })
+          .map(function(row, i) {
+            var conv = (row['Convergence'] || '').trim();
+            var cats = conv.split(/[,;\n\r]+/).map(function(s){ return s.trim(); }).filter(Boolean);
+            return {
+              type: 'Feature',
+              id: i,
+              geometry: {
+                type: 'Point',
+                coordinates: [parseFloat(row['Longitude']), parseFloat(row['Latitude'])]
+              },
+              properties: {
+                convergence_raw:   conv,
+                convergence_label: cats.join(', '),
+                conv_color:        primaryConvergenceColor(conv),
+                title:             row['Title']         || '',
+                date:              row['Date']          || '',
+                incident_type:     row['Incident Type'] || '',
+                municipality:      row['Municipality']  || '',
+                province:          row['Province']      || '',
+              }
+            };
+          })
+      };
+    }
+
+    function addConvergenceLayer() {
+      if (convergenceLayerAdded) return;
+
+      map.addSource('incidents-convergence', {
+        type: 'geojson',
+        data: toConvergenceGeoJSON(incidents),
+      });
+
+      map.addLayer({
+        id: 'convergence-halo',
+        type: 'circle',
+        source: 'incidents-convergence',
+        layout: { visibility: 'none' },
+        paint: {
+          'circle-radius': 14,
+          'circle-color': ['get', 'conv_color'],
+          'circle-opacity': 0,
+          'circle-blur': 0.6,
+        }
+      });
+
+      map.addLayer({
+        id: 'convergence-circles',
+        type: 'circle',
+        source: 'incidents-convergence',
+        layout: { visibility: 'none' },
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 5, 10, 9],
+          'circle-color': ['get', 'conv_color'],
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#fff',
+          'circle-opacity': 0.88,
+        }
+      });
+
+      // Hover tooltip (no close button, follows cursor)
+      map.on('mouseenter', 'convergence-circles', function(e) {
+        map.getCanvas().style.cursor = 'pointer';
+        var props = e.features[0].properties;
+        var coords = e.features[0].geometry.coordinates.slice();
+        if (convergenceHoverPopup) convergenceHoverPopup.remove();
+        convergenceHoverPopup = new maplibregl.Popup({
+          closeButton: false, closeOnClick: false, maxWidth: '260px', offset: 10
+        })
+          .setLngLat(coords)
+          .setHTML(
+            '<strong style="color:' + props.conv_color + '">' + escHtml(props.convergence_label) + '</strong>' +
+            '<div class="popup-title">' + escHtml(props.title) + '</div>' +
+            '<div class="popup-meta">' +
+            '<span>' + escHtml(props.date) + '</span>' +
+            (props.municipality ? '<span>' + escHtml(props.municipality) + (props.province ? ', ' + escHtml(props.province) : '') + '</span>' : (props.province ? '<span>' + escHtml(props.province) + '</span>' : '')) +
+            '</div>'
+          )
+          .addTo(map);
+      });
+
+      map.on('mouseleave', 'convergence-circles', function() {
+        map.getCanvas().style.cursor = '';
+        if (convergenceHoverPopup) { convergenceHoverPopup.remove(); convergenceHoverPopup = null; }
+      });
+
+      // Click → fly + sticky popup
+      map.on('click', 'convergence-circles', function(e) {
+        var props = e.features[0].properties;
+        var coords = e.features[0].geometry.coordinates.slice();
+        if (convergenceHoverPopup) { convergenceHoverPopup.remove(); convergenceHoverPopup = null; }
+        if (activePopup) activePopup.remove();
+        map.flyTo({ center: coords, zoom: 10, speed: 1.2 });
+        activePopup = new maplibregl.Popup({ maxWidth: '280px', offset: 12 })
+          .setLngLat(coords)
+          .setHTML(
+            '<strong style="color:' + props.conv_color + '">' + escHtml(props.convergence_label) + '</strong>' +
+            '<div class="popup-title">' + escHtml(props.title) + '</div>' +
+            '<div class="popup-meta">' +
+            '<span>' + escHtml(props.incident_type) + ' · ' + escHtml(props.date) + '</span>' +
+            (props.municipality ? '<span>' + escHtml(props.municipality) + (props.province ? ', ' + escHtml(props.province) : '') + '</span>' : (props.province ? '<span>' + escHtml(props.province) + '</span>' : '')) +
+            '</div>'
+          )
+          .addTo(map);
+      });
+
+      convergenceLayerAdded = true;
+    }
+
+    function activateConvergenceTab() {
+      ['incidents-circles', 'incidents-halo'].forEach(function(id) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+      });
+      addConvergenceLayer();
+      updateConvergenceLayer(currentFilteredRows);
+
+      var legend = document.getElementById('mapLegend');
+      var html = '<div class="legend-title">Crime Convergence</div>';
+      Object.entries(CONVERGENCE_COLORS).forEach(function(entry) {
+        html += '<div class="legend-row">' +
+          '<span class="legend-swatch" style="background:' + entry[1] + '"></span>' +
+          '<span class="legend-label">' + entry[0] + '</span>' +
+          '</div>';
+      });
+      legend.innerHTML = html;
+    }
+
+    function updateConvergenceLayer(rows) {
+      if (!convergenceLayerAdded) return;
+      map.getSource('incidents-convergence').setData(toConvergenceGeoJSON(rows));
+      ['convergence-circles', 'convergence-halo'].forEach(function(id) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
+      });
+    }
+
+    function deactivateConvergenceTab() {
+      ['convergence-circles', 'convergence-halo'].forEach(function(id) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+      });
+      if (convergenceHoverPopup) { convergenceHoverPopup.remove(); convergenceHoverPopup = null; }
+    }
     document.querySelectorAll('.layer-btn input').forEach(function(radio) {
       radio.addEventListener('change', function(e) {
         document.querySelectorAll('.layer-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -784,6 +974,8 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
 
         // Deactivate arms score if leaving that tab
         if (val !== 'arms-score') deactivateArmsScoreTab();
+        // Deactivate convergence if leaving that tab
+        if (val !== 'crime-convergence') deactivateConvergenceTab();
 
         if (val === 'metrics') {
           metricsPanel.style.display = 'block';
@@ -800,8 +992,8 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
             activateArmsScoreTab();
           } else if (val === 'incidents') {
             buildLegend(); // restore incident type legend
-          } else {
-            if (legend) legend.innerHTML = ''; // placeholder for crime-convergence tab
+          } else if (val === 'crime-convergence') {
+            activateConvergenceTab();
           }
         }
       });
