@@ -573,22 +573,77 @@
     }
 
     // LEGEND
+    var incidentTypeColors = {};   // built once data loads: { 'Seizure': '#00b050', … }
+    var activeIncidentTypes = new Set(); // which types are currently shown
+
     function buildLegend() {
-      var usedTypes = {};
+      // Rebuild type→color map from loaded incidents
+      incidentTypeColors = {};
       incidents.forEach(function(row) {
-        var t = row['Incident Type'] || 'Unknown';
-        if (!usedTypes[t]) usedTypes[t] = typeColor(t);
+        var t = (row['Incident Type'] || 'Unknown').trim();
+        if (!incidentTypeColors[t]) incidentTypeColors[t] = typeColor(t);
       });
 
+      // On first build (or after reset), activate all types
+      if (activeIncidentTypes.size === 0) {
+        activeIncidentTypes = new Set(Object.keys(incidentTypeColors));
+      }
+
+      renderIncidentLegend();
+    }
+
+    function renderIncidentLegend() {
+      var allActive = activeIncidentTypes.size === Object.keys(incidentTypeColors).length;
       var html = '<div class="legend-title">Incident Type</div>';
-      Object.entries(usedTypes).sort(function(a,b){ return a[0].localeCompare(b[0]); }).forEach(function(entry) {
-        html += '<div class="legend-row">' +
-          '<span class="legend-swatch" style="background:' + entry[1] + '"></span>' +
-          '<span class="legend-label">' + entry[0] + '</span>' +
+      Object.entries(incidentTypeColors).sort(function(a,b){ return a[0].localeCompare(b[0]); }).forEach(function(entry) {
+        var type = entry[0], color = entry[1];
+        var active = activeIncidentTypes.has(type);
+        html += '<div class="legend-row inc-legend-row" data-type="' + escHtml(type) + '" style="cursor:pointer;" title="Click to toggle">' +
+          '<span class="legend-swatch" style="background:' + (active ? color : 'transparent') + ';border:2px solid ' + color + ';box-sizing:border-box;transition:background .15s;"></span>' +
+          '<span class="legend-label" style="opacity:' + (active ? '1' : '0.4') + ';transition:opacity .15s;">' + escHtml(type) + '</span>' +
           '</div>';
       });
+      if (!allActive) {
+        html += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);">' +
+          '<span id="incResetFilter" style="font-family:var(--font-ui);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);cursor:pointer;">Show all</span>' +
+          '</div>';
+      }
 
-      document.getElementById('mapLegend').innerHTML = html;
+      var legend = document.getElementById('mapLegend');
+      legend.innerHTML = html;
+
+      legend.querySelectorAll('.inc-legend-row').forEach(function(row) {
+        row.addEventListener('click', function() {
+          var type = row.dataset.type;
+          if (activeIncidentTypes.has(type)) {
+            if (activeIncidentTypes.size > 1) activeIncidentTypes.delete(type);
+          } else {
+            activeIncidentTypes.add(type);
+          }
+          renderIncidentLegend();
+          applyIncidentTypeFilter();
+        });
+      });
+
+      var resetEl = legend.querySelector('#incResetFilter');
+      if (resetEl) {
+        resetEl.addEventListener('click', function() {
+          activeIncidentTypes = new Set(Object.keys(incidentTypeColors));
+          renderIncidentLegend();
+          applyIncidentTypeFilter();
+        });
+      }
+    }
+
+    function applyIncidentTypeFilter() {
+      if (!map.getLayer('incidents-circles')) return;
+      var activeColors = Array.from(activeIncidentTypes).map(function(t) { return incidentTypeColors[t]; });
+      var filterExpr = activeColors.length === Object.keys(incidentTypeColors).length
+        ? null
+        : ['in', ['get', 'color'], ['literal', activeColors]];
+      ['incidents-circles', 'incidents-halo'].forEach(function(id) {
+        if (map.getLayer(id)) map.setFilter(id, filterExpr);
+      });
     }
 
     // STEP 7: RENDER TABLE
@@ -1024,6 +1079,11 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
         if (val !== 'arms-score') deactivateArmsScoreTab();
         // Deactivate convergence if leaving that tab
         if (val !== 'crime-convergence') deactivateConvergenceTab();
+        // Reset incident type filter when leaving that tab
+        if (val !== 'incidents') {
+          activeIncidentTypes = new Set(Object.keys(incidentTypeColors));
+          applyIncidentTypeFilter();
+        }
 
         if (val === 'metrics') {
           metricsPanel.style.display = 'block';
@@ -1039,7 +1099,8 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
           if (val === 'arms-score') {
             activateArmsScoreTab();
           } else if (val === 'incidents') {
-            buildLegend(); // restore incident type legend
+            buildLegend(); // restore incident type legend + re-apply any active filter
+            applyIncidentTypeFilter();
           } else if (val === 'crime-convergence') {
             activateConvergenceTab();
           }
