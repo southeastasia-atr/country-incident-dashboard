@@ -125,7 +125,7 @@
               <h2 class="metrics-section-title">Geography</h2>
               <div class="metrics-row">
                 <div class="metrics-card metrics-card-wide">
-                  <div class="metrics-card-title">Top 10 Provinces by Incident Count</div>
+                  <div class="metrics-card-title">Top 10 Locations by Incident Count</div>
                   <div class="metrics-chart-wrap"><canvas id="chartProvinces"></canvas></div>
                 </div>
               </div>
@@ -352,9 +352,7 @@
               incident_type: row['Incident Type'] || '',
               title:         row['Title']         || '',
               location:      row['Location']      || '',
-              barangay:      row['Barangay']      || '',
-              municipality:  row['Municipality']  || '',
-              province:      row['Province']      || '',
+              location:      row['Location']      || '',
               score:         row['Arms Score']         || '',
               convergence:   row['Convergence']   || '',
               tags:          row['Tags']          || '',
@@ -417,8 +415,7 @@
             '<div class="popup-title">' + props.title + '</div>' +
             '<div class="popup-meta">' +
             '<span>Date: ' + props.date + '</span>' +
-            (props.barangay    ? '<span>' + props.barangay + '</span>' : '') +
-            (props.municipality ? '<span>' + props.municipality + (props.province ? ', ' + props.province : '') + '</span>' : (props.province ? '<span>' + props.province + '</span>' : '')) +
+            (props.location ? '<span>' + props.location + '</span>' : '') +
             (props.score ? '<span>Score: ' + parseFloat(props.score).toFixed(1) + '</span>' : '') +
             (props.convergence ? '<span>Convergence: ' + props.convergence + '</span>' : '') +
             '</div>'
@@ -472,16 +469,25 @@
         var o = document.createElement('option'); o.value = t; o.textContent = t; tagEl.appendChild(o);
       });
 
-      // Populate actor dropdown from Actor Categories field
-      var actorSet = {};
-      incidents.forEach(function(r){
-        (r['Actor Categories'] || '').split('\n').forEach(function(a){
-          a = a.trim();
-          if (a) actorSet[a] = true;
-        });
-      });
+      // Populate actor dropdown from Actor Type controlled vocabulary
+      var ACTOR_TYPES = [
+        'NSAG',
+        'Police',
+        'Military',
+        'Other State Agency',
+        'State Auxiliary',
+        'Political Affiliate',
+        'Youth Gang',
+        'Civilian Official',
+        'Communal/Political Militia',
+        'Criminal Organization',
+        'Criminal Individual',
+        'Civilian Community',
+        'Unknown/Unaffiliated Entity',
+        'Former police/soldier',
+      ];
       var actorEl = document.getElementById('filterActor');
-      Object.keys(actorSet).sort().forEach(function(a){
+      ACTOR_TYPES.forEach(function(a){
         var o = document.createElement('option'); o.value = a; o.textContent = a; actorEl.appendChild(o);
       });
 
@@ -539,7 +545,7 @@
           if (!rowTags.includes(tagVal)) return false;
         }
         if (actorVal) {
-          var rowActors = (row['Actor Categories']||'').split('\n').map(function(a){ return a.trim(); });
+          var rowActors = (row['Actor Type']||'').split('\n').map(function(a){ return a.trim(); });
           if (!rowActors.includes(actorVal)) return false;
         }
         if (search) {
@@ -724,8 +730,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
               '<div class="popup-title">' + escHtml(row['Title'] || '') + '</div>' +
               '<div class="popup-meta">' +
               '<span>Date: ' + escHtml(row['Date'] || '') + '</span>' +
-              (row['Barangay']     ? '<span>' + escHtml(row['Barangay']) + '</span>' : '') +
-              (row['Municipality'] ? '<span>' + escHtml(row['Municipality']) + (row['Province'] ? ', ' + escHtml(row['Province']) : '') + '</span>' : (row['Province'] ? '<span>' + escHtml(row['Province']) + '</span>' : '')) +
+              (row['Location'] ? '<span>' + escHtml(row['Location']) + '</span>' : '') +
               (row['Arms Score']       ? '<span>Score: ' + parseFloat(row['Arms Score']).toFixed(1) + '</span>' : '') +
               (row['Convergence'] ? '<span>Convergence: ' + escHtml(row['Convergence']) + '</span>' : '') +
               '</div>'
@@ -777,6 +782,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
 
     function addArmsHeatmapLayer() {
       if (armsHeatmapAdded) return;
+      if (!map.getSource('incidents')) return;
 
       map.addLayer({
         id: 'arms-heatmap',
@@ -895,8 +901,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
                 title:             row['Title']         || '',
                 date:              row['Date']          || '',
                 incident_type:     row['Incident Type'] || '',
-                municipality:      row['Municipality']  || '',
-                province:          row['Province']      || '',
+                location:          row['Location']      || '',
               }
             };
           })
@@ -953,7 +958,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
             '<div class="popup-title">' + escHtml(props.title) + '</div>' +
             '<div class="popup-meta">' +
             '<span>' + escHtml(props.date) + '</span>' +
-            (props.municipality ? '<span>' + escHtml(props.municipality) + (props.province ? ', ' + escHtml(props.province) : '') + '</span>' : (props.province ? '<span>' + escHtml(props.province) + '</span>' : '')) +
+            (props.location ? '<span>' + escHtml(props.location) + '</span>' : '') +
             '</div>'
           )
           .addTo(map);
@@ -978,7 +983,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
             '<div class="popup-title">' + escHtml(props.title) + '</div>' +
             '<div class="popup-meta">' +
             '<span>' + escHtml(props.incident_type) + ' · ' + escHtml(props.date) + '</span>' +
-            (props.municipality ? '<span>' + escHtml(props.municipality) + (props.province ? ', ' + escHtml(props.province) : '') + '</span>' : (props.province ? '<span>' + escHtml(props.province) + '</span>' : '')) +
+            (props.location ? '<span>' + escHtml(props.location) + '</span>' : '') +
             '</div>'
           )
           .addTo(map);
@@ -1268,10 +1273,19 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       if (convEntries.length) makeHorizBar('chartConvergence', convEntries.map(function(e){return e[0];}), convEntries.map(function(e){return e[1];}), CHART_DEFAULTS.blue);
       else { var el=document.getElementById('chartConvergence'); if(el) el.parentNode.innerHTML='<div class="metrics-empty">No convergence data</div>'; }
 
+      // Extract the last comma-separated segment of Location as a proxy for province/city
       var provCounts = {};
-      rows.forEach(function(r){ var p=(r['Province']||'').trim(); if(p) provCounts[p]=(provCounts[p]||0)+1; });
+      rows.forEach(function(r){
+        var loc = (r['Location']||'').trim();
+        if (!loc) return;
+        // Take the last segment after the final comma as the broadest geographic unit
+        var parts = loc.split(',');
+        var p = parts[parts.length - 1].trim();
+        if (p) provCounts[p] = (provCounts[p]||0) + 1;
+      });
       var provEntries = Object.entries(provCounts).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
-      makeVertBar('chartProvinces', provEntries.map(function(e){return e[0];}), provEntries.map(function(e){return e[1];}), provEntries.map(function(_,i){return i%2===0?CHART_DEFAULTS.accent:CHART_DEFAULTS.blue;}));
+      if (provEntries.length) makeVertBar('chartProvinces', provEntries.map(function(e){return e[0];}), provEntries.map(function(e){return e[1];}), provEntries.map(function(_,i){return i%2===0?CHART_DEFAULTS.accent:CHART_DEFAULTS.blue;}));
+      else { var el=document.getElementById('chartProvinces'); if(el) el.parentNode.innerHTML='<div class=\"metrics-empty\">No location data</div>'; }
     }
   </script>
 
