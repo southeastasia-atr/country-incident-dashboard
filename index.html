@@ -128,6 +128,10 @@
                   <div class="metrics-card-title">Top 10 Locations by Incident Count</div>
                   <div class="metrics-chart-wrap"><canvas id="chartProvinces"></canvas></div>
                 </div>
+                <div class="metrics-card metrics-card-wide">
+                  <div class="metrics-card-title">Top 10 Locations by Arms Score</div>
+                  <div class="metrics-chart-wrap"><canvas id="chartArmsScore"></canvas></div>
+                </div>
               </div>
             </div>
 
@@ -1286,6 +1290,20 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       var provEntries = Object.entries(provCounts).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
       if (provEntries.length) makeVertBar('chartProvinces', provEntries.map(function(e){return e[0];}), provEntries.map(function(e){return e[1];}), provEntries.map(function(_,i){return i%2===0?CHART_DEFAULTS.accent:CHART_DEFAULTS.blue;}));
       else { var el=document.getElementById('chartProvinces'); if(el) el.parentNode.innerHTML='<div class=\"metrics-empty\">No location data</div>'; }
+
+      // Top 10 locations by Arms Score sum
+      var armsByLoc = {};
+      rows.forEach(function(r){
+        var loc = (r['Location']||'').trim();
+        var score = parseFloat(r['Arms Score']);
+        if (!loc || isNaN(score)) return;
+        var parts = loc.split(',');
+        var p = parts[parts.length - 1].trim();
+        if (p) armsByLoc[p] = (armsByLoc[p]||0) + score;
+      });
+      var armsEntries = Object.entries(armsByLoc).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+      if (armsEntries.length) makeVertBar('chartArmsScore', armsEntries.map(function(e){return e[0];}), armsEntries.map(function(e){return Math.round(e[1]);}), armsEntries.map(function(_,i){return i%2===0?CHART_DEFAULTS.accent:CHART_DEFAULTS.blue;}));
+      else { var el2=document.getElementById('chartArmsScore'); if(el2) el2.parentNode.innerHTML='<div class=\"metrics-empty\">No arms score data</div>'; }
     }
   </script>
 
@@ -1332,6 +1350,8 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
     .metrics-chart-wrap:has(#chartFirearms) { min-height: 260px; }
     #chartProvinces { min-height: 300px; }
     .metrics-chart-wrap:has(#chartProvinces) { min-height: 300px; }
+    #chartArmsScore { min-height: 300px; }
+    .metrics-chart-wrap:has(#chartArmsScore) { min-height: 300px; }
     .metrics-empty {
       display: flex; align-items: center; justify-content: center;
       height: 100%; min-height: 80px;
