@@ -162,25 +162,18 @@
 
         <div class="filter-group">
           <label class="filter-label">Type</label>
-          <select id="filterType" class="filter-input filter-select">
-            <option value="">All types</option>
-          </select>
+          <div class="ms-wrap" id="msType"></div>
         </div>
 
         <div class="filter-group">
           <label class="filter-label">Tag</label>
-          <select id="filterTag" class="filter-input filter-select">
-            <option value="">All tags</option>
-          </select>
+          <div class="ms-wrap" id="msTag"></div>
         </div>
 
         <div class="filter-group">
           <label class="filter-label">Actor Type</label>
-          <select id="filterActor" class="filter-input filter-select">
-            <option value="">All actor types</option>
-          </select>
+          <div class="ms-wrap" id="msActor"></div>
         </div>
-
         <div class="filter-group filter-search-group">
           <input type="text" id="filterSearch" class="filter-input filter-search" placeholder="Search…" />
         </div>
@@ -447,17 +440,93 @@
       return t.trim().toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); });
     }
 
-    function buildFilters() {
-      // Populate type dropdown
-      var types = Array.from(new Set(incidents.map(function(r){ return (r['Incident Type']||'').trim(); }).filter(Boolean))).sort();
-      var typeEl = document.getElementById('filterType');
-      types.forEach(function(t){
-        var o = document.createElement('option'); o.value = t; o.textContent = t; typeEl.appendChild(o);
+    // ── Multi-select state ────────────────────────────────────────────
+    var msState = { type: new Set(), tag: new Set(), actor: new Set() };
+
+    function buildMultiSelect(key, containerId, options, placeholder) {
+      var wrap = document.getElementById(containerId);
+      wrap.innerHTML = '';
+
+      var btn = document.createElement('button');
+      btn.className = 'filter-input filter-select ms-btn';
+      btn.type = 'button';
+
+      var panel = document.createElement('div');
+      panel.className = 'ms-panel';
+      panel.style.display = 'none';
+
+      function updateBtn() {
+        var sel = msState[key];
+        if (sel.size === 0) {
+          btn.textContent = placeholder;
+          btn.classList.remove('ms-active');
+        } else if (sel.size === 1) {
+          var v = Array.from(sel)[0];
+          btn.textContent = v.length > 18 ? v.slice(0,16) + '…' : v;
+          btn.classList.add('ms-active');
+        } else {
+          btn.textContent = sel.size + ' selected';
+          btn.classList.add('ms-active');
+        }
+      }
+
+      function buildPanel() {
+        panel.innerHTML = '';
+        var allRow = document.createElement('div');
+        allRow.className = 'ms-row ms-all-row';
+        allRow.innerHTML = '<span class="ms-all-label">All / None</span>';
+        allRow.addEventListener('click', function() {
+          if (msState[key].size === options.length) {
+            msState[key].clear();
+          } else {
+            options.forEach(function(o) { msState[key].add(o); });
+          }
+          buildPanel(); updateBtn(); applyFilters();
+        });
+        panel.appendChild(allRow);
+        var divEl = document.createElement('div');
+        divEl.className = 'ms-divider';
+        panel.appendChild(divEl);
+
+        options.forEach(function(opt) {
+          var row = document.createElement('div');
+          row.className = 'ms-row' + (msState[key].has(opt) ? ' ms-checked' : '');
+          var check = document.createElement('span');
+          check.className = 'ms-check';
+          check.innerHTML = msState[key].has(opt)
+            ? '<svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+            : '';
+          var label = document.createElement('span');
+          label.className = 'ms-option-label';
+          label.textContent = opt;
+          row.appendChild(check);
+          row.appendChild(label);
+          row.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (msState[key].has(opt)) { msState[key].delete(opt); } else { msState[key].add(opt); }
+            buildPanel(); updateBtn(); applyFilters();
+          });
+          panel.appendChild(row);
+        });
+      }
+
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var isOpen = panel.style.display !== 'none';
+        document.querySelectorAll('.ms-panel').forEach(function(p) { p.style.display = 'none'; });
+        if (!isOpen) { buildPanel(); panel.style.display = 'block'; }
       });
 
-      // Populate tag dropdown — split on newline, normalise case, exclude incident types
+      wrap.appendChild(btn);
+      wrap.appendChild(panel);
+      updateBtn();
+    }
+
+    function buildFilters() {
+      var types = Array.from(new Set(incidents.map(function(r){ return (r['Incident Type']||'').trim(); }).filter(Boolean))).sort();
+      buildMultiSelect('type', 'msType', types, 'All types');
+
       var incidentTypes = new Set(incidents.map(function(r){ return (r['Incident Type']||'').trim().toLowerCase(); }));
-      // Also exclude partial-match type-adjacent tags
       ['illicit possession','illicit transfer','illicit manufacture'].forEach(function(t){ incidentTypes.add(t); });
       var tagSet = {};
       incidents.forEach(function(r){
@@ -467,46 +536,30 @@
           if (n && !incidentTypes.has(n.toLowerCase())) tagSet[n] = true;
         });
       });
-      var tags = Object.keys(tagSet).sort();
-      var tagEl = document.getElementById('filterTag');
-      tags.forEach(function(t){
-        var o = document.createElement('option'); o.value = t; o.textContent = t; tagEl.appendChild(o);
-      });
+      buildMultiSelect('tag', 'msTag', Object.keys(tagSet).sort(), 'All tags');
 
-      // Populate actor dropdown from Actor Type controlled vocabulary
       var ACTOR_TYPES = [
-        'NSAG',
-        'Police',
-        'Military',
-        'Other State Agency',
-        'State Auxiliary',
-        'Political Affiliate',
-        'Youth Gang',
-        'Civilian Official',
-        'Communal/Political Militia',
-        'Criminal Organization',
-        'Criminal Individual',
-        'Civilian Community',
-        'Unknown/Unaffiliated Entity',
-        'Former police/soldier',
+        'NSAG','Police','Military','Other State Agency','State Auxiliary',
+        'Political Affiliate','Youth Gang','Civilian Official',
+        'Communal/Political Militia','Criminal Organization','Criminal Individual',
+        'Civilian Community','Unknown/Unaffiliated Entity','Former police/soldier',
       ];
-      var actorEl = document.getElementById('filterActor');
-      ACTOR_TYPES.forEach(function(a){
-        var o = document.createElement('option'); o.value = a; o.textContent = a; actorEl.appendChild(o);
+      buildMultiSelect('actor', 'msActor', ACTOR_TYPES, 'All actor types');
+
+      ['filterDateFrom','filterDateTo','filterSearch'].forEach(function(id){
+        document.getElementById(id).addEventListener('input', applyFilters);
       });
 
-      // Wire up all filter inputs
-      ['filterDateFrom','filterDateTo','filterType','filterTag','filterActor','filterSearch'].forEach(function(id){
-        document.getElementById(id).addEventListener('input', applyFilters);
+      document.addEventListener('click', function() {
+        document.querySelectorAll('.ms-panel').forEach(function(p) { p.style.display = 'none'; });
       });
 
       document.getElementById('filterReset').addEventListener('click', function(){
         document.getElementById('filterDateFrom').value = '';
         document.getElementById('filterDateTo').value = '';
-        document.getElementById('filterType').value = '';
-        document.getElementById('filterTag').value = '';
-        document.getElementById('filterActor').value = '';
         document.getElementById('filterSearch').value = '';
+        msState.type.clear(); msState.tag.clear(); msState.actor.clear();
+        buildFilters();
         applyFilters();
       });
     }
@@ -532,25 +585,25 @@
     }
 
     function applyFilters() {
-      var dateFrom = document.getElementById('filterDateFrom').value;
-      var dateTo   = document.getElementById('filterDateTo').value;
-      var typeVal  = document.getElementById('filterType').value;
-      var tagVal   = document.getElementById('filterTag').value;
-      var actorVal = document.getElementById('filterActor').value;
-      var search   = document.getElementById('filterSearch').value.toLowerCase().trim();
+      var dateFrom  = document.getElementById('filterDateFrom').value;
+      var dateTo    = document.getElementById('filterDateTo').value;
+      var typeSet   = msState.type;
+      var tagSet2   = msState.tag;
+      var actorSet  = msState.actor;
+      var search    = document.getElementById('filterSearch').value.toLowerCase().trim();
 
       var filtered = incidents.filter(function(row) {
         var d = toISO(row['Date'] || '');
         if (dateFrom && d < dateFrom) return false;
         if (dateTo   && d > dateTo)   return false;
-        if (typeVal  && (row['Incident Type']||'').trim() !== typeVal) return false;
-        if (tagVal) {
+        if (typeSet.size > 0 && !typeSet.has((row['Incident Type']||'').trim())) return false;
+        if (tagSet2.size > 0) {
           var rowTags = (row['Tags']||'').split(/[\n,]/).map(normaliseTag);
-          if (!rowTags.includes(tagVal)) return false;
+          if (!rowTags.some(function(t){ return tagSet2.has(t); })) return false;
         }
-        if (actorVal) {
+        if (actorSet.size > 0) {
           var rowActors = (row['Actor Type']||'').split('\n').map(function(a){ return a.trim(); });
-          if (!rowActors.includes(actorVal)) return false;
+          if (!rowActors.some(function(a){ return actorSet.has(a); })) return false;
         }
         if (search) {
           var haystack = [row['Title'],row['Location'],row['Incident Type'],row['Tags'],row['Description'],row['Actors'],row['Weapons']].join(' ').toLowerCase();
