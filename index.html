@@ -701,7 +701,17 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
           '<td colspan="5">' +
           '<div class="expand-body">' +
           (desc ? '<div class="expand-section"><div class="expand-label">Description</div><div class="expand-text">' + desc + '</div></div>' : '') +
-          '<div class="expand-section"><div class="expand-label">Weapons</div><div class="expand-weapons">' + weapons + '</div></div>' +
+          '<div class="expand-section"><div class="expand-label">Weapons</div><div class="expand-weapons">' + weapons + '</div>' +
+          (function() {
+            var src = row['Source'] || '';
+            if (!src) return '';
+            var isUrl = /^https?:\/\//i.test(src.trim());
+            var linkHtml = isUrl
+              ? '<a href="' + escHtml(src.trim()) + '" target="_blank" rel="noopener" class="expand-source-link">Open source ↗</a>'
+              : '<span class="expand-source-text">' + escHtml(src) + '</span>';
+            return '<div class="expand-source"><div class="expand-label" style="margin-top:12px;">Source</div>' + linkHtml + '</div>';
+          })() +
+          '</div>' +
           '</div>' +
           '</td>' +
           '</tr>';
