@@ -563,26 +563,34 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-size: 12.5px;
 }
 
-.expand-source {
-  margin-top: 2px;
+/* Source icon cell — aligns with the sticky Arms Score column */
+.expand-source-cell {
+  width: 72px;
+  min-width: 72px;
+  text-align: center;
+  vertical-align: middle;
+  position: sticky;
+  right: 0;
+  background: var(--surface-2);
+  border-left: 1px solid var(--border);
 }
 
-.expand-source-link {
-  display: inline-block;
-  font-size: 11.5px;
+.expand-source-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--accent);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(232,98,42,.35);
-  padding-bottom: 1px;
-  transition: border-color .15s, color .15s;
+  opacity: 0.75;
+  transition: opacity .15s, color .15s;
 }
 
-.expand-source-link:hover {
+.expand-source-icon:hover {
+  opacity: 1;
   color: #fff;
-  border-color: #fff;
 }
 
 .expand-source-text {
-  font-size: 11.5px;
+  font-size: 10px;
   color: var(--text-muted);
+  font-family: var(--font-ui);
 }

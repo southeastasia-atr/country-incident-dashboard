@@ -698,22 +698,28 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
           '<td>' + (row['Arms Score'] ? parseFloat(row['Arms Score']).toFixed(1) : '--') + '</td>' +
           '</tr>' +
           '<tr class="expand-row" data-expand-id="' + origIdx + '">' +
-          '<td colspan="5">' +
+          '<td colspan="4">' +
           '<div class="expand-body">' +
           (desc ? '<div class="expand-section"><div class="expand-label">Description</div><div class="expand-text">' + desc + '</div></div>' : '') +
           '<div class="expand-section"><div class="expand-label">Weapons</div><div class="expand-weapons">' + weapons + '</div>' +
-          (function() {
-            var src = row['Source'] || '';
-            if (!src) return '';
-            var isUrl = /^https?:\/\//i.test(src.trim());
-            var linkHtml = isUrl
-              ? '<a href="' + escHtml(src.trim()) + '" target="_blank" rel="noopener" class="expand-source-link">Open source ↗</a>'
-              : '<span class="expand-source-text">' + escHtml(src) + '</span>';
-            return '<div class="expand-source"><div class="expand-label" style="margin-top:12px;">Source</div>' + linkHtml + '</div>';
-          })() +
           '</div>' +
           '</div>' +
           '</td>' +
+          (function() {
+            var src = row['Source'] || '';
+            if (!src) return '<td class="expand-source-cell"></td>';
+            var isUrl = /^https?:\/\//i.test(src.trim());
+            if (isUrl) {
+              return '<td class="expand-source-cell">' +
+                '<a href="' + escHtml(src.trim()) + '" target="_blank" rel="noopener" class="expand-source-icon" title="Open source">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>' +
+                '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>' +
+                '</svg>' +
+                '</a></td>';
+            }
+            return '<td class="expand-source-cell"><span class="expand-source-text" title="' + escHtml(src) + '">' + escHtml(src.length > 20 ? src.slice(0,18)+'…' : src) + '</span></td>';
+          })() +
           '</tr>';
       }).join('');
 
