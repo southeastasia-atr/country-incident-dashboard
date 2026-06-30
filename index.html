@@ -281,55 +281,82 @@
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
 
     // GLOBAL STATE
-    let incidents = [];
+    let incidents = [];       // currently-active-country rows (drives map/table/filters/charts, unchanged downstream)
+    let allIncidents = [];    // combined rows from every loaded country, tagged with row['Country']
+    let activeCountry = 'PHL'; // default country on load; will be driven by nav in a later step
     let sortCol = 'Date';
     let sortAsc = true;
     let activeRowId = null;
     let activePopup = null;
 
-    // STEP 5: LOAD & PARSE CSV
-    fetch('PHLdata.csv')
-      .then(function(response) {
-        console.log('Fetch status:', response.status, response.statusText);
-        return response.text();
-      })
-      .then(function(text) {
-        console.log('Raw text length:', text.length);
-        console.log('First 200 chars:', JSON.stringify(text.substring(0, 200)));
+    // COUNTRY SOURCES — add new entries here as more countries come online
+    var COUNTRY_SOURCES = [
+      { code: 'PHL', file: 'PHLdata.csv', label: 'Philippines' },
+      { code: 'THA', file: 'THAdata.csv', label: 'Thailand' },
+    ];
 
-        var results = Papa.parse(text, {
-          header: true,
-          skipEmptyLines: true,
-          encoding: 'UTF-8',
+    function fetchAndParseCSV(file) {
+      return fetch(file)
+        .then(function(response) {
+          console.log('Fetch status:', file, response.status, response.statusText);
+          return response.text();
+        })
+        .then(function(text) {
+          var results = Papa.parse(text, {
+            header: true,
+            skipEmptyLines: true,
+            encoding: 'UTF-8',
+          });
+          console.log('Raw rows from', file, ':', results.data.length);
+          return results.data;
         });
+    }
 
-        console.log('Raw rows from CSV:', results.data.length);
-        console.log('First row keys:', Object.keys(results.data[0] || {}));
-        console.log('First row sample:', results.data[0]);
-
-        incidents = results.data.filter(function(row) {
-          return row['Latitude'] && row['Longitude'] &&
-            !isNaN(parseFloat(row['Latitude'])) &&
-            !isNaN(parseFloat(row['Longitude']));
+    // STEP 5: LOAD & PARSE ALL COUNTRY CSVs
+    Promise.all(
+      COUNTRY_SOURCES.map(function(src) {
+        return fetchAndParseCSV(src.file).then(function(rows) {
+          rows.forEach(function(row) {
+            row['Country'] = src.code; // tag every row with its country code
+          });
+          return rows;
+        }).catch(function(err) {
+          console.error('Fetch error for', src.file, err);
+          return []; // fail soft — one missing country shouldn't break the others
         });
-        console.log('Loaded incidents:', incidents.length);
-        currentFilteredRows = incidents;
-
-        if (map.loaded()) {
-          addIncidentLayer();
-        } else {
-          map.on('load', addIncidentLayer);
-        }
-
-        buildFilters();
-        // applyFilters() and buildLegend() called inside addIncidentLayer() once map is ready
-        renderTable(incidents); // populate table immediately while map loads
       })
-      .catch(function(err) {
-        console.error('Fetch error:', err);
-        document.getElementById('tableBody').innerHTML =
-          '<tr class="placeholder-row"><td colspan="5">Error loading PHLdata.csv</td></tr>';
+    ).then(function(rowsByCountry) {
+      var combined = [].concat.apply([], rowsByCountry);
+
+      allIncidents = combined.filter(function(row) {
+        return row['Latitude'] && row['Longitude'] &&
+          !isNaN(parseFloat(row['Latitude'])) &&
+          !isNaN(parseFloat(row['Longitude']));
       });
+      console.log('Loaded allIncidents (all countries):', allIncidents.length);
+
+      // For now, keep existing behavior: active dashboard shows PHL only.
+      // Country switching itself is wired up in a later step.
+      incidents = allIncidents.filter(function(row) {
+        return row['Country'] === activeCountry;
+      });
+      console.log('Loaded incidents (active country: ' + activeCountry + '):', incidents.length);
+      currentFilteredRows = incidents;
+
+      if (map.loaded()) {
+        addIncidentLayer();
+      } else {
+        map.on('load', addIncidentLayer);
+      }
+
+      buildFilters();
+      // applyFilters() and buildLegend() called inside addIncidentLayer() once map is ready
+      renderTable(incidents); // populate table immediately while map loads
+    }).catch(function(err) {
+      console.error('Fetch error:', err);
+      document.getElementById('tableBody').innerHTML =
+        '<tr class="placeholder-row"><td colspan="5">Error loading incident data.</td></tr>';
+    });
 
     // CSV TO GEOJSON
     function toGeoJSON(rows) {
