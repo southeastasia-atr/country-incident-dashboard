@@ -438,7 +438,11 @@
         var raw = r['Tags'] || '';
         raw.split(/[\n,]/).forEach(function(t){
           var n = normaliseTag(t);
-          if (n && !incidentTypes.has(n.toLowerCase())) tagSet[n] = true;
+          if (!n) return;
+          if (incidentTypes.has(n.toLowerCase())) return;
+          if (n.toLowerCase().startsWith('convergence')) return;
+          if (n.endsWith(')') && !n.includes('(')) return;
+          tagSet[n] = true;
         });
       });
       buildMultiSelect('tag', 'msTag', Object.keys(tagSet).sort(), 'All tags');
@@ -698,7 +702,11 @@
         var raw = r['Tags'] || '';
         raw.split(/[\n,]/).forEach(function(t){
           var n = normaliseTag(t);
-          if (n && !incidentTypes.has(n.toLowerCase())) tagSet[n] = true;
+          if (!n) return;
+          if (incidentTypes.has(n.toLowerCase())) return;
+          if (n.toLowerCase().startsWith('convergence')) return;
+          if (n.endsWith(')') && !n.includes('(')) return;
+          tagSet[n] = true;
         });
       });
       buildMultiSelect('tag', 'msTag', Object.keys(tagSet).sort(), 'All tags');
