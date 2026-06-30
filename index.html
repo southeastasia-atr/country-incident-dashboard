@@ -57,7 +57,9 @@
         </svg>
       </span>
       <h1>Incident Map</h1>
-      <span class="header-sub">Philippines</span>
+      <nav class="country-nav" id="countryNav" aria-label="Select country">
+        <!-- buttons injected by JS from COUNTRY_SOURCES -->
+      </nav>
     </div>
   </header>
 
@@ -352,11 +354,80 @@
       buildFilters();
       // applyFilters() and buildLegend() called inside addIncidentLayer() once map is ready
       renderTable(incidents); // populate table immediately while map loads
+
+      renderCountryNav();
     }).catch(function(err) {
       console.error('Fetch error:', err);
       document.getElementById('tableBody').innerHTML =
         '<tr class="placeholder-row"><td colspan="5">Error loading incident data.</td></tr>';
     });
+
+    // COUNTRY NAV
+    function renderCountryNav() {
+      var nav = document.getElementById('countryNav');
+      nav.innerHTML = '';
+      COUNTRY_SOURCES.forEach(function(src) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'country-nav-item' + (src.code === activeCountry ? ' active' : '');
+        btn.textContent = src.label;
+        btn.addEventListener('click', function() {
+          if (src.code === activeCountry) return; // already active, nothing to do
+          switchCountry(src.code);
+        });
+        nav.appendChild(btn);
+      });
+    }
+
+    function switchCountry(countryCode) {
+      activeCountry = countryCode;
+
+      incidents = allIncidents.filter(function(row) {
+        return row['Country'] === activeCountry;
+      });
+      currentFilteredRows = incidents;
+      console.log('Switched to country: ' + activeCountry + ', incidents:', incidents.length);
+
+      // Reset filter state — Thailand's filter option set differs from Philippines'
+      msState.type.clear();
+      msState.tag.clear();
+      msState.actor.clear();
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
+      document.getElementById('filterSearch').value = '';
+
+      // Rebuild the three multi-select dropdowns directly (avoids re-binding the
+      // static listeners that buildFilters() attaches on first load only)
+      var types = Array.from(new Set(incidents.map(function(r){ return (r['Incident Type']||'').trim(); }).filter(Boolean))).sort();
+      buildMultiSelect('type', 'msType', types, 'All types');
+
+      var incidentTypes = new Set(incidents.map(function(r){ return (r['Incident Type']||'').trim().toLowerCase(); }));
+      ['illicit possession','illicit transfer','illicit manufacture'].forEach(function(t){ incidentTypes.add(t); });
+      var tagSet = {};
+      incidents.forEach(function(r){
+        var raw = r['Tags'] || '';
+        raw.split(/[\n,]/).forEach(function(t){
+          var n = normaliseTag(t);
+          if (n && !incidentTypes.has(n.toLowerCase())) tagSet[n] = true;
+        });
+      });
+      buildMultiSelect('tag', 'msTag', Object.keys(tagSet).sort(), 'All tags');
+
+      var ACTOR_TYPES = [
+        'NSAG','Police','Military','Other State Agency','State Auxiliary',
+        'Political Affiliate','Youth Gang','Civilian Official',
+        'Communal/Political Militia','Criminal Organization','Criminal Individual',
+        'Civilian Community','Unknown/Unaffiliated Entity','Former police/soldier',
+      ];
+      buildMultiSelect('actor', 'msActor', ACTOR_TYPES, 'All actor types');
+
+      // Reset incident-type legend so it re-derives from the new country's types
+      activeIncidentTypes = new Set();
+      buildLegend();   // rebuilds legend + re-activates all types for this country
+      applyFilters();  // re-filters incidents, updates map source, table, metrics, heatmap/convergence
+
+      renderCountryNav(); // re-render nav so the active pill updates
+    }
 
     // CSV TO GEOJSON
     function toGeoJSON(rows) {

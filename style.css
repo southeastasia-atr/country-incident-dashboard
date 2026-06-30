@@ -74,6 +74,40 @@ html, body {
   padding-left: 12px;
 }
 
+/* ── Country nav ─────────────────────────────────────────────────────────── */
+.country-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+  margin-left: 0;
+}
+
+.country-nav-item {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 4px 10px;
+  border-radius: calc(var(--radius) - 1px);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.country-nav-item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.country-nav-item.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ── Main layout ─────────────────────────────────────────────────────────── */
 .layout {
   display: grid;
