@@ -456,11 +456,14 @@
       buildLegend();   // rebuilds legend + re-activates all types for this country
       applyFilters();  // re-filters incidents, updates map source, table, metrics, heatmap/convergence
 
-      // Flip which country is dimmed vs. active in the background context layer.
+      // Flip which country is dimmed vs. active in the background context layers.
       // Must run AFTER buildLegend() so incidentTypeColors/activeIncidentTypes
       // already reflect the new country, not the one we just switched away from.
       if (map.getLayer('incidents-bg-circles')) {
         applyIncidentTypeFilter();
+      }
+      if (map.getLayer('convergence-bg-circles')) {
+        applyConvergenceFilter();
       }
 
       renderCountryNav(); // re-render nav so the active pill updates
@@ -1194,6 +1197,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
                 date:              row['Date']          || '',
                 incident_type:     row['Incident Type'] || '',
                 location:          row['Location']      || '',
+                country:           row['Country']       || '',
               }
             };
           })
@@ -1202,6 +1206,31 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
 
     function addConvergenceLayer() {
       if (convergenceLayerAdded) return;
+
+      // Background source: all countries' convergence points, used only to render
+      // dimmed context for the non-active country. No click/hover interactivity.
+      if (allIncidents.length) {
+        map.addSource('incidents-convergence-bg', {
+          type: 'geojson',
+          data: toConvergenceGeoJSON(allIncidents),
+        });
+
+        map.addLayer({
+          id: 'convergence-bg-circles',
+          type: 'circle',
+          source: 'incidents-convergence-bg',
+          filter: ['!=', ['get', 'country'], activeCountry],
+          layout: { visibility: 'none' },
+          paint: {
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 4, 10, 7],
+            'circle-color': ['get', 'conv_color'],
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#fff',
+            'circle-opacity': 0.18,
+            'circle-stroke-opacity': 0.18,
+          }
+        }); // no beforeId needed — added first, so it naturally sits below convergence-halo/circles added next
+      }
 
       map.addSource('incidents-convergence', {
         type: 'geojson',
@@ -1330,12 +1359,21 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       if (!convergenceLayerAdded) return;
       var active = Array.from(convergenceActiveCategories);
       var activeColors = active.map(function(cat) { return CONVERGENCE_COLORS[cat]; });
-      var filterExpr = activeColors.length === Object.keys(CONVERGENCE_COLORS).length
+      var categoryFilterExpr = activeColors.length === Object.keys(CONVERGENCE_COLORS).length
         ? null
         : ['in', ['get', 'conv_color'], ['literal', activeColors]];
       ['convergence-circles', 'convergence-halo'].forEach(function(id) {
-        if (map.getLayer(id)) map.setFilter(id, filterExpr);
+        if (map.getLayer(id)) map.setFilter(id, categoryFilterExpr);
       });
+
+      // Background layer: combine the same category filter with the country-dimming filter
+      if (map.getLayer('convergence-bg-circles')) {
+        var countryFilterExpr = ['!=', ['get', 'country'], activeCountry];
+        var combined = categoryFilterExpr
+          ? ['all', countryFilterExpr, categoryFilterExpr]
+          : countryFilterExpr;
+        map.setFilter('convergence-bg-circles', combined);
+      }
     }
 
     function activateConvergenceTab() {
@@ -1354,10 +1392,13 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       ['convergence-circles', 'convergence-halo'].forEach(function(id) {
         if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
       });
+      if (map.getLayer('convergence-bg-circles')) {
+        map.setLayoutProperty('convergence-bg-circles', 'visibility', 'visible');
+      }
     }
 
     function deactivateConvergenceTab() {
-      ['convergence-circles', 'convergence-halo'].forEach(function(id) {
+      ['convergence-circles', 'convergence-halo', 'convergence-bg-circles'].forEach(function(id) {
         if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
       });
       ['incidents-circles', 'incidents-halo', 'incidents-bg-circles'].forEach(function(id) {
