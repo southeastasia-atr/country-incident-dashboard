@@ -282,6 +282,29 @@
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
 
+    // Fit the map to a country's incident data, auto-derived from lat/long spread.
+    // Falls back silently (no-op) if a country has no geocoded rows.
+    function flyToCountryBounds(countryCode, opts) {
+      opts = opts || {};
+      var rows = allIncidents.filter(function(row) { return row['Country'] === countryCode; });
+      if (rows.length === 0) return;
+
+      var bounds = new maplibregl.LngLatBounds();
+      rows.forEach(function(row) {
+        var lat = parseFloat(row['Latitude']);
+        var lng = parseFloat(row['Longitude']);
+        if (!isNaN(lat) && !isNaN(lng)) bounds.extend([lng, lat]);
+      });
+
+      if (bounds.isEmpty()) return;
+
+      map.fitBounds(bounds, {
+        padding: 40,
+        duration: opts.animate === false ? 0 : 1000,
+        maxZoom: 10,
+      });
+    }
+
     // GLOBAL STATE
     let incidents = [];       // currently-active-country rows (drives map/table/filters/charts, unchanged downstream)
     let allIncidents = [];    // combined rows from every loaded country, tagged with row['Country']
@@ -345,10 +368,15 @@
       console.log('Loaded incidents (active country: ' + activeCountry + '):', incidents.length);
       currentFilteredRows = incidents;
 
-      if (map.loaded()) {
+      function initialFitAndAddLayer() {
+        flyToCountryBounds(activeCountry, { animate: false });
         addIncidentLayer();
+      }
+
+      if (map.loaded()) {
+        initialFitAndAddLayer();
       } else {
-        map.on('load', addIncidentLayer);
+        map.on('load', initialFitAndAddLayer);
       }
 
       buildFilters();
@@ -387,6 +415,8 @@
       });
       currentFilteredRows = incidents;
       console.log('Switched to country: ' + activeCountry + ', incidents:', incidents.length);
+
+      flyToCountryBounds(activeCountry);
 
       // Reset filter state — Thailand's filter option set differs from Philippines'
       msState.type.clear();
