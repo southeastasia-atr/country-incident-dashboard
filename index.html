@@ -456,6 +456,13 @@
       buildLegend();   // rebuilds legend + re-activates all types for this country
       applyFilters();  // re-filters incidents, updates map source, table, metrics, heatmap/convergence
 
+      // Flip which country is dimmed vs. active in the background context layer.
+      // Must run AFTER buildLegend() so incidentTypeColors/activeIncidentTypes
+      // already reflect the new country, not the one we just switched away from.
+      if (map.getLayer('incidents-bg-circles')) {
+        applyIncidentTypeFilter();
+      }
+
       renderCountryNav(); // re-render nav so the active pill updates
     }
 
@@ -477,12 +484,12 @@
               incident_type: row['Incident Type'] || '',
               title:         row['Title']         || '',
               location:      row['Location']      || '',
-              location:      row['Location']      || '',
               score:         row['Arms Score']         || '',
               convergence:   row['Convergence']   || '',
               tags:          row['Tags']          || '',
               source:        row['Source']        || '',
               color:         typeColor(row['Incident Type']),
+              country:       row['Country']       || '',
             }
           };
         })
@@ -492,6 +499,33 @@
     // STEP 6: ADD POINT LAYER
     function addIncidentLayer() {
       var geojson = toGeoJSON(incidents);
+
+      // Background source: ALL countries' points, undifferentiated by filters,
+      // used only to render dimmed context for non-active countries underneath
+      // the interactive active-country layer. No click/hover handlers attached.
+      map.addSource('incidents-bg', {
+        type: 'geojson',
+        data: toGeoJSON(allIncidents),
+      });
+
+      map.addLayer({
+        id: 'incidents-bg-circles',
+        type: 'circle',
+        source: 'incidents-bg',
+        filter: ['!=', ['get', 'country'], activeCountry],
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            5, 4,
+            10, 7
+          ],
+          'circle-color': ['get', 'color'],
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#fff',
+          'circle-opacity': 0.18,
+          'circle-stroke-opacity': 0.18,
+        }
+      });
 
       map.addSource('incidents', {
         type: 'geojson',
@@ -829,12 +863,21 @@
     function applyIncidentTypeFilter() {
       if (!map.getLayer('incidents-circles')) return;
       var activeColors = Array.from(activeIncidentTypes).map(function(t) { return incidentTypeColors[t]; });
-      var filterExpr = activeColors.length === Object.keys(incidentTypeColors).length
+      var typeFilterExpr = activeColors.length === Object.keys(incidentTypeColors).length
         ? null
         : ['in', ['get', 'color'], ['literal', activeColors]];
       ['incidents-circles', 'incidents-halo'].forEach(function(id) {
-        if (map.getLayer(id)) map.setFilter(id, filterExpr);
+        if (map.getLayer(id)) map.setFilter(id, typeFilterExpr);
       });
+
+      // Background layer: combine the same type filter with the country-dimming filter
+      if (map.getLayer('incidents-bg-circles')) {
+        var countryFilterExpr = ['!=', ['get', 'country'], activeCountry];
+        var combined = typeFilterExpr
+          ? ['all', countryFilterExpr, typeFilterExpr]
+          : countryFilterExpr;
+        map.setFilter('incidents-bg-circles', combined);
+      }
     }
 
     // STEP 7: RENDER TABLE
@@ -985,6 +1028,47 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       if (armsHeatmapAdded) return;
       if (!map.getSource('incidents')) return;
 
+      // Background heatmap: non-active country, low intensity, for regional context
+      if (map.getSource('incidents-bg')) {
+        map.addLayer({
+          id: 'arms-heatmap-bg',
+          type: 'heatmap',
+          source: 'incidents-bg',
+          filter: ['!=', ['get', 'country'], activeCountry],
+          layout: { visibility: 'none' },
+          paint: {
+            'heatmap-weight': [
+              'interpolate', ['linear'],
+              ['to-number', ['get', 'score'], 0],
+              0,  0,
+              50, 1
+            ],
+            'heatmap-intensity': [
+              'interpolate', ['linear'], ['zoom'],
+              4, 0.6,
+              10, 2.5
+            ],
+            'heatmap-radius': [
+              'interpolate', ['linear'], ['zoom'],
+              4, 18,
+              10, 40
+            ],
+            'heatmap-color': [
+              'interpolate', ['linear'],
+              ['heatmap-density'],
+              0,    'rgba(26,26,46,0)',
+              0.15, '#3b1054',
+              0.35, '#6b2d8b',
+              0.55, '#b5367a',
+              0.70, '#e8602c',
+              0.85, '#f5a623',
+              1.0,  '#fef200'
+            ],
+            'heatmap-opacity': 0.22 // dimmed — context only, not the focus
+          }
+        }, 'incidents-halo'); // insert below incident points (same as the active heatmap)
+      }
+
       map.addLayer({
         id: 'arms-heatmap',
         type: 'heatmap',
@@ -1031,7 +1115,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
 
     function activateArmsScoreTab() {
       // Hide incident point layers
-      ['incidents-circles', 'incidents-halo'].forEach(function(id) {
+      ['incidents-circles', 'incidents-halo', 'incidents-bg-circles'].forEach(function(id) {
         if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
       });
 
@@ -1064,14 +1148,21 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
       if (!armsHeatmapAdded) return;
       // Re-use the incidents source — already filtered — just toggle visibility
       map.setLayoutProperty('arms-heatmap', 'visibility', 'visible');
+      if (map.getLayer('arms-heatmap-bg')) {
+        map.setLayoutProperty('arms-heatmap-bg', 'visibility', 'visible');
+        map.setFilter('arms-heatmap-bg', ['!=', ['get', 'country'], activeCountry]);
+      }
     }
 
     function deactivateArmsScoreTab() {
-      ['incidents-circles', 'incidents-halo'].forEach(function(id) {
+      ['incidents-circles', 'incidents-halo', 'incidents-bg-circles'].forEach(function(id) {
         if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
       });
       if (map.getLayer('arms-heatmap')) {
         map.setLayoutProperty('arms-heatmap', 'visibility', 'none');
+      }
+      if (map.getLayer('arms-heatmap-bg')) {
+        map.setLayoutProperty('arms-heatmap-bg', 'visibility', 'none');
       }
     }
 
@@ -1248,7 +1339,7 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
     }
 
     function activateConvergenceTab() {
-      ['incidents-circles', 'incidents-halo'].forEach(function(id) {
+      ['incidents-circles', 'incidents-halo', 'incidents-bg-circles'].forEach(function(id) {
         if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
       });
       addConvergenceLayer();
@@ -1268,6 +1359,9 @@ if (lines.length === 1) lines = text.split(/;/).map(function(s){ return s.trim()
     function deactivateConvergenceTab() {
       ['convergence-circles', 'convergence-halo'].forEach(function(id) {
         if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+      });
+      ['incidents-circles', 'incidents-halo', 'incidents-bg-circles'].forEach(function(id) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
       });
       if (convergenceHoverPopup) { convergenceHoverPopup.remove(); convergenceHoverPopup = null; }
       convergenceActiveCategories = new Set(Object.keys(CONVERGENCE_COLORS));
